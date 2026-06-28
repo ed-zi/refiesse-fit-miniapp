@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{var j=["https://claude.ai","https://preview.claude.ai","https://5d892dfd-865e-459c-a414-c53798e889b3.claudeusercontent.com"];var x=true;var S=30000;var f=3000;document.addEventListener("DOMContentLoaded",()=>{const H=window.Babel;const G="om-src-id";if(H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[G])){H.registerPlugin(G,({types:Y})=>({visitor:{JSXOpeningElement(U,Q){const J=U.node;if(J.name&&J.name.type==="JSXMemberExpression")return;for(let V=0;V<J.attributes.length;V++){const L=J.attributes[V];if(L.type==="JSXAttribute"&&L.name&&L.name.name==="data-om-id")return}const W=Q.file&&Q.file.opts&&Q.file.opts.filename||"?";const Z=J.loc&&J.loc.start;const z=`jsx:${W}:${J.start??0}:${Z?Z.line:0}:${Z?Z.column+1:0}`;J.attributes.push(Y.jsxAttribute(Y.jsxIdentifier("data-om-id"),Y.stringLiteral(z)))}}}))}const k="om-text-extract";let A=false;if(x&&H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[k])){const Y=window.React;if(Y&&Y.useSyncExternalStore&&Y.createElement){A=true;const U={};const Q=new Set;let J=0;window.__omTextO=U;window.__omTextSet=(z)=>{for(const V in z){const L=z[V];if(L==null)delete U[V];else U[V]=L}J++;Q.forEach((V)=>V())};const W=(z)=>{Q.add(z);return()=>Q.delete(z)};const Z=()=>J;window.__OmT=function z(V){Y.useSyncExternalStore(W,Z,Z);return Y.createElement("span",{"data-om-text":V.i,className:"__om-t"},V.i in U?U[V.i]:V.children)};H.registerPlugin(k,({types:z})=>{const V={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const L={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const _=($,C)=>z.logicalExpression("??",z.memberExpression(z.logicalExpression("||",z.memberExpression(z.identifier("window"),z.identifier("__omTextO")),z.objectExpression([])),z.stringLiteral($),true),C);const E=($)=>$.file&&$.file.opts&&$.file.opts.filename||"?";const B=($)=>$.file&&$.file.code||"";const b=($,C)=>{const X=(F)=>F&&F.start!=null&&F.end!=null&&(F.type==="StringLiteral"||F.type==="TemplateLiteral"&&F.expressions.length===0)?[F.start,F.end]:null;const N=X(C);if(N)return N;if(C&&C.type==="Identifier"){const F=$.scope.getBinding(C.name);if(F&&F.constant&&F.path.node.type==="VariableDeclarator"){return X(F.path.node.init)}}return null};const M=($,C,X)=>{const N=$.node;let F=false;const w=(K,q)=>{F=true;return z.jsxElement(z.jsxOpeningElement(z.jsxIdentifier("__OmT"),[z.jsxAttribute(z.jsxIdentifier("i"),z.stringLiteral(K))],false),z.jsxClosingElement(z.jsxIdentifier("__OmT")),[q],false)};const D=N.children.map((K)=>{if(K.type==="JSXText"){if(K.start==null||K.end==null)return K;const q=X.slice(K.start,K.end);const R=q.length-q.trimStart().length;const m=q.length-q.trimEnd().length;if(R+m>=q.length)return K;return w(`txt:${C}:${K.start+R}:${K.end-m}`,K)}if(K.type==="JSXExpressionContainer"){const q=b($,K.expression);if(q)return w(`str:${C}:${q[0]}:${q[1]}`,K)}return K});if(F)N.children=D};return{visitor:{JSXOpeningElement($,C){const X=$.node;const N=E(C);const F={};for(let w=0;w<X.attributes.length;w++){const D=X.attributes[w];if(D.type!=="JSXAttribute"||!D.name)continue;const K=D.name.name;if(!L[K])continue;if(!D.value||D.value.type!=="StringLiteral")continue;if(D.value.start==null||D.value.end==null)continue;const q=`txt:${N}:${D.value.start}:${D.value.end}`;F[K]=q;D.value=z.jsxExpressionContainer(_(q,z.stringLiteral(D.value.value)))}if(Object.keys(F).length){X.attributes.push(z.jsxAttribute(z.jsxIdentifier("data-om-text-attrs"),z.stringLiteral(JSON.stringify(F))))}},JSXElement($,C){const X=$.node.openingElement;const N=X&&X.name&&X.name.name;if(N==="__OmT")return;if(typeof N==="string"&&V[N])return;M($,E(C),B(C))},JSXFragment($,C){M($,E(C),B(C))}}}})}}const u=A?["transform-react-jsx-source",G,k]:["transform-react-jsx-source",G];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((Y,U)=>{const Q=Y.getAttribute("data-plugins")||"";const J=u.filter((W)=>Q.indexOf(W)<0);if(J.length){Y.setAttribute("data-plugins",Q?`${Q},${J.join(",")}`:J.join(","))}if(!Y.hasAttribute("data-filename")){Y.setAttribute("data-filename",Y.getAttribute("src")||`inline-${U}`)}})});var y=window.parent;if(y&&y!==window){const H=(Q,J)=>{try{y.postMessage({__omelette_log:true,type:Q,data:J},"*")}catch{}};["log","warn","error"].forEach((Q)=>{const J=console[Q];console[Q]=(...W)=>{const Z=W.map((z)=>{try{return typeof z==="object"?JSON.stringify(z):String(z)}catch{try{return String(z)}catch{return"[unstringifiable]"}}}).join(" ");H(Q,Z);J.apply(console,W)}});window.addEventListener("error",(Q)=>{const J=Q.target;if(J&&J!==window&&J.tagName){const W=J.src||J.href||"";H("resource_error",`${J.tagName} failed to load: ${W}`)}else{H("error",`${Q.message||"Unknown error"} at ${Q.filename||"?"}:${Q.lineno||0}:${Q.colno||0}`)}},true);window.addEventListener("unhandledrejection",(Q)=>{const J=Q.reason;const W=J instanceof Error?`${J.message} ${J.stack}`:String(J);H("error",`Unhandled rejection: ${W}`)});const G=()=>{try{y.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(document.readyState==="complete")G();else window.addEventListener("load",G);if(window.ResizeObserver)new ResizeObserver(G).observe(document.documentElement);const k={};let A=0;window.claude={complete(Q){return new Promise((J,W)=>{if(!j.length){W(new Error("claude.complete: no parent origin"));return}const Z=`c${++A}`;const z=()=>setTimeout(()=>{delete k[Z];W(new Error(`claude.complete: no data for ${S/1000}s`))},S);const V=z();k[Z]={resolve:J,reject:W,text:"",t:V,arm:z};try{for(const L of j){y.postMessage({__om_api:true,id:Z,body:Q},L)}}catch(L){clearTimeout(V);delete k[Z];W(L)}})}};const u={};let Y=0;window.omelette={writeFile:(Q,J)=>new Promise((W,Z)=>{if(!j.length){W();return}const z=`f${++Y}`;const V=setTimeout(()=>{delete u[z];W()},f);u[z]={resolve:W,reject:Z,t:V};try{for(const L of j){y.postMessage({__om_file:true,id:z,op:"write",path:Q,content:J},L)}}catch{clearTimeout(V);delete u[z];W()}})};const U=(Q)=>{try{return JSON.stringify(Q)}catch{return JSON.stringify(String(Q))}};window.addEventListener("message",(Q)=>{if(j.indexOf(Q.origin)<0)return;if(Q.source!==y)return;const J=Q.data;if(!J)return;if(J.type==="omelette-preview-refresh"){if(typeof J.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(J.token))return;const z=Math.max(1,Math.floor((J.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+J.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+z;return}if(J.__om_file_r){const z=u[J.id];if(!z)return;clearTimeout(z.t);delete u[J.id];if(J.ok)z.resolve();else z.reject(new Error(J.error||"write failed"));return}if(J.__om_api_r){const z=k[J.id];if(!z)return;if(J.error!=null){clearTimeout(z.t);delete k[J.id];z.reject(new Error(J.error));return}if(J.chunk!=null){clearTimeout(z.t);z.t=z.arm();z.text+=J.chunk;return}if(J.done){clearTimeout(z.t);delete k[J.id];z.resolve(J.text!=null?J.text:z.text);return}return}if(!J.__om_eval)return;const W=J;const Z=(z)=>{Q.source.postMessage({...z,__om_eval_r:1,id:W.id},Q.origin)};try{const z=(0,eval)(W.code);if(z&&typeof z.then==="function"){z.then((V)=>Z({ok:1,v:U(V)}),(V)=>Z({ok:0,e:String(V)}))}else{Z({ok:1,v:U(z)})}}catch(z){Z({ok:0,e:String(z)})}})}})();
+</script>
+
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0.5in; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1e1e1e; --muted: #67656f; --bg: #fff;
+      --canvas: #f6f4fb; --lav: #f1efff; --lav2: #e6dfff;
+      --purple: #8f73ea; --lime: #d5ffc7; --lime-ink: #24451f;
+      --coral: #ff8562; --line: #ece8f7;
+      --shadow: 0 18px 42px rgba(44,38,70,.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: var(--canvas);
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .board { display: grid; grid-template-columns: 310px 390px; gap: 28px; align-items: start; padding: 28px; }
+
+    /* ─── SIDEBAR ─── */
+    .brief { background: #fff; border: 1px solid var(--line); border-radius: 30px; padding: 24px; box-shadow: var(--shadow); }
+    .brief h1 { font-size: 30px; line-height: 1; letter-spacing: -.07em; text-transform: uppercase; margin: 0 0 12px; color: var(--ink); }
+    .brief p { font-size: 14px; line-height: 1.5; color: var(--muted); margin: 0 0 14px; }
+    .steps { display: grid; gap: 7px; margin-top: 18px; }
+    .step { border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: #faf9ff; font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .step.active { background: var(--lav); border-color: #d8d0ff; color: var(--purple); font-weight: 700; }
+
+    /* ─── PHONE FRAME ─── */
+    .phone { width: 390px; height: 844px; border: 10px solid #1c1c1c; border-radius: 48px; overflow: hidden; background: #fff; box-shadow: 0 24px 70px rgba(30,25,48,.22); position: relative; }
+    .status { height: 34px; padding: 10px 24px 0; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--ink); }
+    .app { height: calc(100% - 34px); display: flex; flex-direction: column; position: relative; }
+    .screen { display: none; height: 100%; overflow: auto; scrollbar-width: none; padding: 18px 20px 100px; }
+    .screen.active { display: block; }
+    .screen::-webkit-scrollbar { display: none; }
+
+    /* ─── TOP BAR ─── */
+    .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .brand { font-weight: 900; font-size: 23px; letter-spacing: -.06em; color: var(--ink); }
+    .brand span { color: var(--purple); }
+
+    /* Back button — clean circle with chevron */
+    .back {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: #fff; border: 1.5px solid rgba(143,115,234,0.2);
+      cursor: pointer; color: var(--ink);
+      box-shadow: 0 2px 8px rgba(44,38,70,0.08);
+      transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
+      flex-shrink: 0;
+    }
+    .back:hover { background: var(--lav); box-shadow: 0 4px 14px rgba(143,115,234,0.18); }
+    .back:active { transform: scale(0.9); }
+
+    /* Avatar / icon button — gradient pill */
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #ede9ff 0%, #d9f7cc 100%);
+      border: none; cursor: pointer;
+      color: #3e2d7a; font-weight: 800; font-size: 11px;
+      box-shadow: 0 2px 10px rgba(44,38,70,0.1);
+      transition: transform 0.1s, box-shadow 0.1s;
+      flex-shrink: 0;
+    }
+    .avatar:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(44,38,70,0.15); }
+    .avatar:active { transform: scale(0.93); }
+
+    /* ─── CTA BUTTONS ─── */
+    .cta {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; min-height: 52px; border-radius: 16px;
+      font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+      border: none; cursor: pointer; padding: 0 20px;
+      font-family: inherit;
+      transition: transform 0.1s ease, box-shadow 0.12s ease;
+      -webkit-tap-highlight-color: transparent; user-select: none;
+    }
+    .cta:active { transform: scale(0.97); }
+
+    /* Primary — purple */
+    .cta.full {
+      background: linear-gradient(150deg, #a888f7 0%, #7c5fe8 100%);
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(124,95,232,0.38), inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+    .cta.full:hover { box-shadow: 0 7px 26px rgba(124,95,232,0.48); }
+
+    /* Secondary — lime */
+    .cta.lime {
+      background: linear-gradient(150deg, #ccf7b5 0%, #9ddf7e 100%);
+      color: #1a4015;
+      box-shadow: 0 3px 12px rgba(110,200,80,0.28);
+    }
+    .cta.lime:hover { box-shadow: 0 6px 20px rgba(110,200,80,0.42); }
+
+    /* Ghost — outlined */
+    .cta.secondary {
+      background: rgba(143,115,234,0.05);
+      border: 1.5px solid rgba(143,115,234,0.3);
+      color: var(--purple);
+    }
+    .cta.secondary:hover { background: rgba(143,115,234,0.1); border-color: rgba(143,115,234,0.5); }
+
+    /* ─── BOTTOM NAV ─── */
+    .nav {
+      position: absolute; left: 12px; right: 12px; bottom: 12px; height: 70px;
+      border-radius: 26px; display: grid; grid-template-columns: repeat(4,1fr);
+      align-items: center;
+      background: rgba(255,255,255,0.97);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(143,115,234,0.1);
+      box-shadow: 0 8px 32px rgba(44,38,70,0.14), inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+    .nav button {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; height: 100%; padding: 8px 4px;
+      color: #b0adc0; font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em;
+      border: none; background: none; cursor: pointer;
+      transition: color 0.15s; font-family: inherit;
+    }
+    .nav button svg { width: 22px; height: 22px; transition: transform 0.15s; }
+    .nav button.active { color: var(--purple); }
+    .nav button.active svg { transform: scale(1.08); }
+    .nav button.active svg * { stroke-width: 2; }
+
+    /* ─── CONTENT COMPONENTS ─── */
+    .hero { background: linear-gradient(145deg,var(--lav) 0%,var(--lime) 100%); border-radius: 22px; padding: 20px; margin-bottom: 14px; }
+    .hero.tall { min-height: 160px; }
+    .hero h2, .screen h2 { font-size: 26px; font-weight: 900; letter-spacing: -.05em; margin: 8px 0 6px; color: var(--ink); line-height: 1.15; }
+    .lead { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(143,115,234,0.13); color: var(--purple); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 50px; }
+
+    .section { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+    .section h3 { font-size: 16px; font-weight: 800; letter-spacing: -.03em; margin: 0; color: var(--ink); }
+    .section small { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip { padding: 7px 15px; border-radius: 50px; font-size: 12px; font-weight: 700; background: #fff; border: 1.5px solid var(--line); cursor: pointer; transition: all 0.12s; color: var(--muted); }
+    .chip.active { background: var(--lav); border-color: var(--lav2); color: var(--purple); }
+    .chip:hover { border-color: var(--lav2); color: var(--purple); }
+
+    /* Workout card */
+    .workout { display: flex; align-items: center; gap: 14px; padding: 14px; background: #fff; border: 1px solid var(--line); border-radius: 18px; margin-bottom: 10px; cursor: pointer; transition: box-shadow 0.12s, transform 0.1s; }
+    .workout:hover { box-shadow: 0 4px 18px rgba(44,38,70,0.09); transform: translateY(-1px); }
+    .workout:active { transform: scale(0.99); }
+    .thumb { width: 64px; height: 64px; border-radius: 14px; background: linear-gradient(135deg,var(--lav),var(--lav2)); flex-shrink: 0; }
+    .thumb.dark { background: linear-gradient(135deg,#c4b8f5,#9d85e0); }
+    .thumb.peach { background: linear-gradient(135deg,#ffd6c8,var(--coral)); }
+    .card-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; line-height: 1.3; }
+    .meta { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+    .pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 50px; background: var(--lav); color: var(--purple); border: 1px solid var(--line); }
+    .pill.free { background: var(--lime); color: var(--lime-ink); border-color: #c2e8b3; }
+    .pill.premium { background: var(--lav2); color: var(--purple); }
+    .small { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+    /* Program card */
+    .program { background: linear-gradient(145deg,var(--lav),var(--lime)); border-radius: 22px; padding: 18px; margin-bottom: 10px; cursor: pointer; }
+    .program h3 { font-size: 17px; font-weight: 800; letter-spacing: -.04em; margin: 0; color: var(--ink); }
+    .program .lead { font-size: 13px; }
+    .progress-bar { background: rgba(0,0,0,0.08); border-radius: 50px; height: 6px; overflow: hidden; margin: 14px 0 7px; }
+    .progress-bar span { display: block; height: 100%; background: linear-gradient(90deg,var(--purple),#b8a0f5); border-radius: 50px; }
+
+    /* Video block */
+    .video { background: linear-gradient(135deg,var(--lav2),#c4b8f5); border-radius: 22px; height: 200px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .video::after { content: ''; position: absolute; inset: 0; background: rgba(80,60,140,0.07); }
+    .play-btn { width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,0.92); display: grid; place-items: center; box-shadow: 0 4px 20px rgba(80,60,140,0.22); position: relative; z-index: 1; }
+
+    /* Facts row */
+    .facts { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 14px 0; }
+    .fact { background: var(--lav); border-radius: 14px; padding: 12px 10px; text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; line-height: 1.6; }
+    .fact b { display: block; font-size: 20px; font-weight: 900; color: var(--ink); letter-spacing: -.03em; }
+
+    /* Warning note */
+    .note { background: #fff8f5; border: 1px solid #ffe0d6; border-radius: 14px; padding: 12px 14px; font-size: 12px; color: #804030; line-height: 1.5; margin-bottom: 14px; }
+
+    /* Paywall block */
+    .paywall { background: linear-gradient(145deg,var(--lav),#e8e0ff,var(--lime)); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .feature { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+    .check-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--purple); display: grid; place-items: center; flex-shrink: 0; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 14px 0; }
+    .stat { background: var(--lav); border-radius: 14px; padding: 12px 8px; text-align: center; }
+    .stat b { display: block; font-size: 22px; font-weight: 900; letter-spacing: -.04em; color: var(--ink); }
+    .stat span { font-size: 10px; font-weight: 600; color: var(--muted); }
+
+    /* Success */
+    .success-block { text-align: center; padding: 30px 20px 20px; }
+    .success-ring { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg,var(--lav),var(--lime)); display: grid; place-items: center; margin: 0 auto 18px; box-shadow: 0 8px 24px rgba(143,115,234,0.25); }
+
+    /* Option selectors */
+    .option { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 18px; margin-bottom: 10px; cursor: pointer; background: #fff; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+    .option:hover { border-color: var(--lav2); background: #faf9ff; }
+    .option.active { border-color: var(--purple); background: var(--lav); box-shadow: 0 0 0 3px rgba(143,115,234,0.1); }
+    .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #d5d1e8; display: grid; place-items: center; flex-shrink: 0; background: #fff; transition: border-color 0.15s; }
+    .radio::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--purple); opacity: 0; transform: scale(0.4); transition: opacity 0.15s, transform 0.15s; }
+    .option.active .radio { border-color: var(--purple); }
+    .option.active .radio::after { opacity: 1; transform: scale(1); }
+
+    /* Search + filter */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .search-box { flex: 1; background: var(--lav); border-radius: 14px; padding: 11px 14px; font-size: 13px; color: var(--muted); font-weight: 500; }
+    .filter-btn { width: 44px; height: 44px; border-radius: 14px; background: var(--lav); display: grid; place-items: center; color: var(--purple); cursor: pointer; flex-shrink: 0; }
+
+    /* Toast */
+    .toast { position: absolute; top: 14px; left: 50%; transform: translateX(-50%) translateY(-16px); background: rgba(28,20,56,0.88); backdrop-filter: blur(8px); color: #fff; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 50px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+  <template id="__bundler_thumbnail" data-bg-color="#f6f4fb">
+    <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+      <rect width="800" height="600" fill="#f6f4fb"/>
+      <rect x="290" y="80" width="220" height="440" rx="32" fill="#1c1c1c"/>
+      <rect x="302" y="96" width="196" height="408" rx="22" fill="#fff"/>
+      <rect x="330" y="130" width="140" height="56" rx="16" fill="#f1efff"/>
+      <rect x="330" y="200" width="140" height="12" rx="6" fill="#e6dfff"/>
+      <rect x="330" y="222" width="100" height="10" rx="5" fill="#ece8f7"/>
+      <rect x="330" y="252" width="140" height="44" rx="14" fill="#8f73ea"/>
+      <rect x="330" y="310" width="60" height="24" rx="12" fill="#d5ffc7"/>
+      <rect x="400" y="310" width="70" height="24" rx="12" fill="#f1efff"/>
+      <rect x="302" y="460" width="196" height="44" rx="20" fill="rgba(255,255,255,0.95)"/>
+      <circle cx="345" cy="482" r="8" fill="#8f73ea" opacity="0.25"/>
+      <circle cx="385" cy="482" r="8" fill="#8f73ea" opacity="0.15"/>
+      <circle cx="425" cy="482" r="8" fill="#8f73ea" opacity="0.15"/>
+      <circle cx="465" cy="482" r="8" fill="#8f73ea" opacity="0.15"/>
+      <circle cx="345" cy="482" r="4" fill="#8f73ea"/>
+    </svg>
+  </template>
+</helmet>
+
+<div class="board">
+
+  <!-- ── BRIEF SIDEBAR ── -->
+  <aside class="brief">
+    <h1>Что делать дальше</h1>
+    <p><b>Сейчас:</b> пройти кликабельный flow и проверить логику: понятно ли, куда нажимать, где paywall, зачем прогресс, как выглядит доступ после Tribute.</p>
+    <p><b>Потом:</b> утвердить flow с Катей, собрать контент-матрицу и переводить это в задачи разработки.</p>
+    <div class="steps" id="steps"></div>
+  </aside>
+
+  <!-- ── PHONE ── -->
+  <section class="phone">
+    <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+    <div class="app">
+      <div class="toast" id="toast">Отмечено</div>
+
+      <!-- HOME -->
+      <section class="screen active" data-screen="home">
+        <div class="top">
+          <div class="brand">re<span>.</span>fit</div>
+          <button class="avatar" data-go="profile">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10" cy="7" r="3.5"></circle>
+              <path d="M3 18c0-3.3 3.1-6 7-6s7 2.7 7 6"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="hero tall">
+          <div class="badge">Premium активен до 18 июля</div>
+          <h2>Что нужно телу сегодня?</h2>
+          <p class="lead">Выберите состояние — я подберу мягкую тренировку на 10–20 минут.</p>
+        </div>
+        <button class="cta full" data-go="onboarding" style="margin-bottom:14px">Подобрать тренировку</button>
+        <div class="chips">
+          <div class="chip active" data-go="catalog">Спина</div>
+          <div class="chip" data-go="catalog">Осанка</div>
+          <div class="chip" data-go="catalog">Кор</div>
+          <div class="chip" data-go="catalog">Сон</div>
+        </div>
+        <div class="section"><h3>Тренировка дня</h3><small>12 мин</small></div>
+        <div class="workout" data-go="workout">
+          <div class="thumb dark"></div>
+          <div>
+            <div class="card-title">Мягкая разгрузка шеи и плеч</div>
+            <div class="meta"><span class="pill free">free</span><span class="pill">без инвентаря</span></div>
+            <div class="small">Начать →</div>
+          </div>
+        </div>
+        <div class="section"><h3>Текущий план</h3><small>3/7</small></div>
+        <div class="program" data-go="plans">
+          <h3>7 дней для спины и осанки</h3>
+          <div class="progress-bar"><span style="width:43%"></span></div>
+          <p class="lead" style="color:#315d2a">Сегодня: грудной отдел + дыхание</p>
+        </div>
+      </section>
+
+      <!-- ONBOARDING -->
+      <section class="screen" data-screen="onboarding">
+        <div class="top">
+          <button class="back" data-go="home">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4.5L6.5 9l4.5 4.5"></path>
+            </svg>
+          </button>
+          <div class="avatar" style="font-size:11px;font-weight:900">1/4</div>
+        </div>
+        <div class="hero">
+          <div class="badge">быстрый подбор</div>
+          <h2>Что сейчас нужно телу?</h2>
+          <p class="lead">Выберите основное состояние. Это не диагноз, а мягкий ориентир.</p>
+        </div>
+        <div class="option active">
+          <div class="radio"></div>
+          <div><div class="card-title">Шея и плечи зажаты</div><p class="small">после работы, сидения, дороги</p></div>
+        </div>
+        <div class="option">
+          <div class="radio"></div>
+          <div><div class="card-title">Поясница устала</div><p class="small">хочется разгрузить мягко</p></div>
+        </div>
+        <div class="option">
+          <div class="radio"></div>
+          <div><div class="card-title">Кор и живот</div><p class="small">без агрессивных скручиваний</p></div>
+        </div>
+        <button class="cta full" data-go="catalog" style="margin-top:8px">Показать тренировки</button>
+      </section>
+
+      <!-- CATALOG -->
+      <section class="screen" data-screen="catalog">
+        <div class="top">
+          <div class="brand">Каталог</div>
+          <button class="avatar" data-go="profile">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="8.5" cy="8.5" r="5"></circle>
+              <path d="M16 16l-3.5-3.5"></path>
+            </svg>
+          </button>
+        </div>
+        <h2>Найти по состоянию</h2>
+        <p class="lead" style="margin-bottom:14px">Тренировки собраны по целям: шея, поясница, кор, мобильность, расслабление.</p>
+        <div class="filter-row">
+          <div class="search-box">Поиск: поясница, кор...</div>
+          <div class="filter-btn">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M2 5h14M5 9h8M8 13h2"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="chips">
+          <div class="chip active">Все</div>
+          <div class="chip">5–10 мин</div>
+          <div class="chip">Premium</div>
+          <div class="chip">Новичкам</div>
+        </div>
+        <div class="workout" data-go="locked">
+          <div class="thumb peach"></div>
+          <div>
+            <div class="card-title">Кор без скручиваний</div>
+            <div class="meta"><span class="pill premium">premium</span><span class="pill">18 мин</span><span class="pill">новичок</span></div>
+            <div class="small">Открыть →</div>
+          </div>
+        </div>
+        <div class="workout" data-go="locked">
+          <div class="thumb"></div>
+          <div>
+            <div class="card-title">Поясница после сидячего дня</div>
+            <div class="meta"><span class="pill premium">premium</span><span class="pill">15 мин</span></div>
+            <div class="small">Открыть →</div>
+          </div>
+        </div>
+        <div class="workout" data-go="workout">
+          <div class="thumb dark"></div>
+          <div>
+            <div class="card-title">Вечернее расслабление</div>
+            <div class="meta"><span class="pill free">free</span><span class="pill">9 мин</span></div>
+            <div class="small">Начать →</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WORKOUT -->
+      <section class="screen" data-screen="workout">
+        <div class="top">
+          <button class="back" data-go="catalog">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4.5L6.5 9l4.5 4.5"></path>
+            </svg>
+          </button>
+          <button class="avatar" data-toast="Добавлено в избранное">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 17S3 12 3 7.5a4 4 0 017-2.6A4 4 0 0117 7.5C17 12 10 17 10 17z"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="video">
+          <div class="play-btn">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M8 6l9 5-9 5V6z" fill="#7c5fe8" stroke="#7c5fe8" stroke-width="1.5" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+        </div>
+        <h2>Мягкая мобилизация грудного отдела</h2>
+        <p class="lead" style="margin-bottom:14px">Для тех, кто долго сидел и чувствует зажатость в шее, плечах и верхе спины.</p>
+        <div class="facts">
+          <div class="fact"><b>14</b>мин</div>
+          <div class="fact"><b>0</b>инвентарь</div>
+          <div class="fact"><b>easy</b>уровень</div>
+        </div>
+        <div class="note"><b>Осторожно:</b> если есть острая боль, онемение или недавняя травма — не идём через усилие.</div>
+        <button class="cta full" data-toast="Тренировка началась" style="margin-bottom:10px">Начать тренировку</button>
+        <button class="cta lime full" data-go="progress" data-toast="Тренировка отмечена">Я сделала</button>
+      </section>
+
+      <!-- PLANS -->
+      <section class="screen" data-screen="plans">
+        <div class="top">
+          <div class="brand">Планы</div>
+          <div class="avatar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 3l7 7-7 7-7-7 7-7z"></path>
+            </svg>
+          </div>
+        </div>
+        <h2>Идти по системе</h2>
+        <p class="lead" style="margin-bottom:14px">Планы на 5–7 дней помогают не искать случайные упражнения.</p>
+        <div class="program" data-go="workout">
+          <div class="badge" style="margin-bottom:10px">активный план</div>
+          <h3>7 дней для спины и осанки</h3>
+          <div class="progress-bar"><span style="width:43%"></span></div>
+          <p class="lead" style="color:#315d2a">3 из 7 дней выполнено</p>
+          <button class="cta lime full" style="margin-top:14px">Продолжить</button>
+        </div>
+        <div class="workout" data-go="paywall">
+          <div class="thumb peach"></div>
+          <div>
+            <div class="card-title">Кор без скручиваний</div>
+            <div class="meta"><span class="pill premium">premium</span><span class="pill">5 дней</span></div>
+            <div class="small">Открыть план →</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOCKED -->
+      <section class="screen" data-screen="locked">
+        <div class="top">
+          <button class="back" data-go="catalog">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4.5L6.5 9l4.5 4.5"></path>
+            </svg>
+          </button>
+          <div class="avatar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="9" width="12" height="9" rx="2.5"></rect>
+              <path d="M7 9V6.5a3 3 0 016 0V9"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="video" style="filter:saturate(.6);opacity:.75">
+          <div class="play-btn" style="background:rgba(255,255,255,0.7)">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="9" width="12" height="9" rx="2.5"></rect>
+              <path d="M7 9V6.5a3 3 0 016 0V9"></path>
+            </svg>
+          </div>
+        </div>
+        <h2>Кор без скручиваний</h2>
+        <p class="lead" style="margin-bottom:14px">Premium-тренировка из плана для глубоких мышц корпуса.</p>
+        <div class="facts">
+          <div class="fact"><b>18</b>мин</div>
+          <div class="fact"><b>0</b>инвентарь</div>
+          <div class="fact"><b>easy</b>уровень</div>
+        </div>
+        <div class="paywall" style="margin-top:14px">
+          <div>
+            <div class="badge">premium</div>
+            <h2 style="font-size:22px;margin-top:10px">Откройте доступ, чтобы продолжить</h2>
+            <p class="lead" style="margin-top:4px">Эта тренировка входит в Premium-каталог.</p>
+          </div>
+          <button class="cta full" data-go="paywall">Открыть через Tribute</button>
+        </div>
+      </section>
+
+      <!-- PAYWALL -->
+      <section class="screen" data-screen="paywall">
+        <div class="top">
+          <button class="back" data-go="catalog">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4.5L6.5 9l4.5 4.5"></path>
+            </svg>
+          </button>
+          <div class="avatar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M10 2v4M10 14v4M2 10h4M14 10h4M4.9 4.9l2.8 2.8M12.3 12.3l2.8 2.8M4.9 15.1l2.8-2.8M12.3 7.7l2.8-2.8"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="paywall">
+          <div>
+            <div class="badge">Refiesse Fit Premium</div>
+            <h2 style="margin-top:12px">Идти по системе, а не искать посты</h2>
+            <p class="lead" style="margin-top:8px">Откройте планы, каталог, прогресс и мягкое движение под ваше состояние.</p>
+            <div class="feature" style="margin-top:16px">
+              <span class="check-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"></path></svg></span>
+              <span>3 мини-плана на 5–7 дней</span>
+            </div>
+            <div class="feature">
+              <span class="check-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"></path></svg></span>
+              <span>Premium-каталог тренировок</span>
+            </div>
+            <div class="feature">
+              <span class="check-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"></path></svg></span>
+              <span>Избранное, история и отметка «Я сделала»</span>
+            </div>
+          </div>
+          <div>
+            <button class="cta full" data-go="success">Открыть через Tribute</button>
+            <button class="cta secondary full" style="margin-top:10px" data-go="catalog">Продолжить бесплатно</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUCCESS -->
+      <section class="screen" data-screen="success">
+        <div class="top">
+          <div class="brand">Доступ</div>
+          <div class="avatar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10l5 5 8-8"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="success-block">
+          <div class="success-ring">
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 15l7 7 13-13"></path>
+            </svg>
+          </div>
+          <h2>Доступ открыт</h2>
+          <p class="lead">Premium-планы и тренировки уже доступны. Начните с мягкого маршрута на 7 дней.</p>
+        </div>
+        <div class="section"><h3>С чего начать</h3><small>рекомендация</small></div>
+        <div class="program" data-go="plans">
+          <h3>7 дней мягкого старта</h3>
+          <p class="lead" style="color:#315d2a;margin-top:8px">Короткие практики без перегруза.</p>
+          <button class="cta lime full" style="margin-top:14px">Начать план</button>
+        </div>
+      </section>
+
+      <!-- PROGRESS -->
+      <section class="screen" data-screen="progress">
+        <div class="top">
+          <div class="brand">Прогресс</div>
+          <div class="avatar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 14l4-4 4 2 6-7"></path>
+              <path d="M14 5h3v3"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="hero">
+          <div class="badge">эта неделя</div>
+          <h2>Даже 10 минут считаются</h2>
+          <p class="lead">Прогресс поддерживает регулярность, но не наказывает за пропуски.</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>4</b><span>тренировки</span></div>
+          <div class="stat"><b>62</b><span>минуты</span></div>
+          <div class="stat"><b>3</b><span>дня подряд</span></div>
+          <div class="stat"><b>3/7</b><span>план</span></div>
+        </div>
+        <button class="cta lime full" data-toast="Уже отмечено" style="margin-top:4px">Я сделала тренировку</button>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="screen" data-screen="profile">
+        <div class="top">
+          <button class="back" data-go="home">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4.5L6.5 9l4.5 4.5"></path>
+            </svg>
+          </button>
+          <div class="brand">Профиль</div>
+        </div>
+        <div class="program" style="background:#fff;border:1px solid var(--line)">
+          <h3>Катя</h3>
+          <p class="lead" style="margin-top:8px">Telegram ID связан</p>
+        </div>
+        <div class="program">
+          <div class="badge">Premium активен</div>
+          <h3>Подписка через Tribute</h3>
+          <p class="lead" style="color:#315d2a;margin-top:8px">Доступ открыт до 18 июля. Продление управляется в Tribute.</p>
+          <button class="cta lime full" style="margin-top:14px">Управлять подпиской</button>
+        </div>
+        <button class="cta secondary full" data-go="onboarding" style="margin-top:6px">Изменить подбор</button>
+      </section>
+
+      <!-- ── BOTTOM NAV ── -->
+      <nav class="nav">
+        <button data-go="home" class="active">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 10.5L11 4l8 6.5"></path>
+            <path d="M5 9v10a1 1 0 001 1h4v-5h2v5h4a1 1 0 001-1V9"></path>
+          </svg>
+          Сегодня
+        </button>
+        <button data-go="catalog">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="12" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="3" y="12" width="7" height="7" rx="2"></rect>
+            <rect x="12" y="12" width="7" height="7" rx="2"></rect>
+          </svg>
+          Каталог
+        </button>
+        <button data-go="plans">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="16" height="14" rx="2.5"></rect>
+            <path d="M8 3v4M14 3v4M3 10h16"></path>
+          </svg>
+          Планы
+        </button>
+        <button data-go="progress">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 15l5-5 4 3 7-8"></path>
+            <path d="M3 19h16"></path>
+          </svg>
+          Прогресс
+        </button>
+      </nav>
+
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const labels = {
+      home:      'Home: быстрое действие на сегодня',
+      onboarding:'Подбор: понять состояние',
+      catalog:   'Каталог: выбрать тренировку',
+      workout:   'Тренировка: понять и начать',
+      plans:     'Планы: система на 5–7 дней',
+      locked:    'Locked: premium закрыт',
+      paywall:   'Paywall: ценность + Tribute',
+      success:   'Success: доступ открыт',
+      progress:  'Прогресс: удержание без давления',
+      profile:   'Профиль: подписка и настройки'
+    };
+    const order = ['home','onboarding','catalog','workout','plans','locked','paywall','success','progress','profile'];
+
+    const steps = document.getElementById('steps');
+    steps.innerHTML = order.map(k => `<div class="step" data-step="${k}">${labels[k]}</div>`).join('');
+
+    const toast = document.getElementById('toast');
+    const showToast = (t) => {
+      toast.textContent = t;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1400);
+    };
+
+    const go = (name) => {
+      document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+      document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === name));
+      document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.go === name));
+      const active = document.querySelector('.screen.active');
+      if (active) active.scrollTop = 0;
+    };
+
+    document.addEventListener('click', e => {
+      const opt = e.target.closest('.option');
+      if (opt) {
+        opt.parentElement.querySelectorAll('.option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      }
+      const toastBtn = e.target.closest('[data-toast]');
+      if (toastBtn) showToast(toastBtn.dataset.toast);
+      const goBtn = e.target.closest('[data-go]');
+      if (goBtn) go(goBtn.dataset.go);
+    });
+
+    go('home');
+  }
+
+  renderVals() { return {}; }
+}
+</script>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Refiesse Fit";
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        !settleRoot.querySelector('.sc-placeholder');
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  // Project support.js may predate runtime default-seeding; push via bridge.
+  if (isDc && window.__dcSetProps && window.__dcRootName) {
+    try {
+      const dpEl = document.querySelector('script[data-dc-script]');
+      const meta = JSON.parse((dpEl && dpEl.getAttribute('data-props')) || '{}');
+      const bag = {};
+      for (const k in meta)
+        if (k[0] !== '$' && meta[k] && meta[k].default !== undefined)
+          bag[k] = meta[k].default;
+      if (Object.keys(bag).length) {
+        window.__dcSetProps(window.__dcRootName(), bag);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } catch (e) {}
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    for (let y = 0; y <= full; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  try { await document.fonts.ready; } catch (e) {}
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+  } catch (e) {}
+  // Size the PDF page to the rendered design unless the file opted into
+  // standard paper via @page{size:letter|A4|…}. Decks own their own @page.
+  // Wrappers (body, …) lose padding+margin so the frame sits at (0,0); the
+  // frame itself loses only margin — its padding is INSIDE the measured
+  // rect and must stay, or content shifts and leaves a gap at bottom/right.
+  var __m = null;
+  try { __m = (() => {
+  var docEl = document.documentElement;
+  var doc = { width: docEl.scrollWidth, height: docEl.scrollHeight };
+
+  var ds = document.querySelector('deck-stage');
+  if (ds) {
+    var dw = Number(ds.getAttribute('width')) || 1920;
+    var dh = Number(ds.getAttribute('height')) || 1080;
+    var n = typeof ds.length === 'number' ? ds.length : ds.children.length;
+    var idx = typeof ds.index === 'number' ? ds.index : 0;
+    var frames = [];
+    for (var i = 0; i < n; i++) frames.push({ left: 0, top: 0, width: dw, height: dh });
+    return { kind: 'deck', doc: doc, frames: frames,
+      authored: frames.map(function(){return{width:true,height:true}}),
+      deck: { width: dw, height: dh, slideCount: n, index: idx },
+      signals: { paperPage: false, pxPage: false } };
+  }
+
+  var paperPage = false, pxPage = false;
+  var eachRule = function (fn) {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rs; try { rs = document.styleSheets[s].cssRules; } catch (e) { continue; }
+      for (var r = 0; r < rs.length; r++) {
+        fn(rs[r]);
+        if (rs[r].cssRules) for (var n = 0; n < rs[r].cssRules.length; n++) fn(rs[r].cssRules[n]);
+      }
+    }
+  };
+  eachRule(function (r) {
+    if (r.type !== 6) return;
+    var m = /\bsize\s*:\s*([^;}]+)/i.exec(r.cssText || '');
+    if (!m) return;
+    if (/\b(letter|a[3-5]|legal|ledger)\b/i.test(m[1])) paperPage = true;
+    if (/\d+(?:\.\d+)?px\b/i.test(m[1])) pxPage = true;
+  });
+  var signals = { paperPage: paperPage, pxPage: pxPage };
+
+  var pxVal = function (v) {
+    var m = /^(\d+(?:\.\d+)?)px$/.exec(v || ''); return m ? +m[1] : 0;
+  };
+  var authoredPx = function (el, prop) {
+    if (pxVal(el.style[prop])) return true;
+    var attr = el.getAttribute(prop);
+    if (attr && /^\d+$/.test(attr)) return true;
+    var hit = false;
+    eachRule(function (r) {
+      if (hit || r.type !== 1 || !r.style) return;
+      try { if (el.matches(r.selectorText) && pxVal(r.style[prop])) hit = true; } catch (e) {}
+    });
+    return hit;
+  };
+
+  var el = document.body, rootPxW = false;
+  for (;;) {
+    var kids = [];
+    for (var c = 0; c < el.children.length; c++) {
+      var t = el.children[c].tagName;
+      if (t !== 'SCRIPT' && t !== 'STYLE' && t !== 'TEMPLATE') kids.push(el.children[c]);
+    }
+    if (kids.length !== 1 || !(kids[0] instanceof HTMLElement)) break;
+    el.setAttribute('data-om-frame-wrap', '');
+    el = kids[0];
+    rootPxW = authoredPx(el, 'width');
+    if (rootPxW) break;
+  }
+  if (!rootPxW) rootPxW = authoredPx(el, 'width');
+
+  // @page{size:letter} alone is a flowing doc; with a px-width root it's a
+  // fixed sheet pretending to be paper — fall through and size to render.
+  if (paperPage && !rootPxW) {
+    return { kind: 'paper-doc', doc: doc, signals: signals,
+      frames: [{ left: 0, top: 0, width: doc.width, height: doc.height }],
+      authored: [{ width: false, height: false }] };
+  }
+
+  var sx = window.scrollX || 0, sy = window.scrollY || 0;
+  var rectOf = function (e) {
+    var r = e.getBoundingClientRect();
+    var oy; try { oy = getComputedStyle(e).overflowY; } catch (err) {}
+    var h = oy === 'visible' ? Math.max(r.height, e.scrollHeight || 0) : r.height;
+    return { left: r.left + sx, top: r.top + sy, width: r.width, height: h };
+  };
+
+  // Multi-frame: ≥2 visible non-fixed children, each with authored px width
+  // AND height, all within ±2px of each other. Off unless the page opts in
+  // via data-om-multi-frame on the stop element — guards against card grids
+  // and pricing tables that match the geometry but aren't separate canvases.
+  if (el.hasAttribute('data-om-multi-frame')) {
+    var cands = [];
+    for (var k = 0; k < el.children.length; k++) {
+      var ch = el.children[k];
+      var cs; try { cs = getComputedStyle(ch); } catch (e) { continue; }
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+      var rc = rectOf(ch);
+      if (rc.width < 2 || rc.height < 2) continue;
+      if (!authoredPx(ch, 'width') || !authoredPx(ch, 'height')) continue;
+      cands.push(rc);
+    }
+    if (cands.length >= 2) {
+      var w0 = cands[0].width, h0 = cands[0].height, ok = true;
+      for (var q = 1; q < cands.length; q++)
+        if (Math.abs(cands[q].width - w0) > 2 || Math.abs(cands[q].height - h0) > 2) ok = false;
+      if (ok) return { kind: 'multi-frame', doc: doc, signals: signals,
+        frames: cands, authored: cands.map(function(){return{width:true,height:true}}) };
+    }
+  }
+
+  el.setAttribute('data-om-frame', '');
+  return { kind: 'single-canvas', doc: doc, signals: signals,
+    frames: [rectOf(el)],
+    authored: [{ width: rootPxW, height: authoredPx(el, 'height') }] };
+})(); } catch (e) {}
+  var frame = null;
+  if (__m && __m.kind === 'single-canvas') {
+    var f = __m.frames && __m.frames[0];
+    if (f && f.width >= 200 && f.height >= 200) {
+      frame = f;
+      var fst = document.createElement('style');
+      fst.textContent = '@media print{@page{size:' + Math.ceil(f.width) + 'px ' +
+        Math.ceil(f.height) + 'px;margin:0}' +
+        'html,body,[data-om-frame-wrap]{padding:0!important;margin:0!important;background:none!important}' +
+        '[data-om-frame]{margin:0!important}}';
+      document.body.appendChild(fst);
+    }
+  }
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks (slides
+  // are sized to the page) and for fixed-size canvases (frame set, or an author
+  // px-based @page) — runs as before for flowing docs on letter/A4.
+  try {
+    if (!ds && !frame && !(__m && __m.signals && __m.signals.pxPage)) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a real @page margin only when the source has
+      // no @page of its own; computed style can't tell us (it reports screen
+      // media), so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /@page\s*\{[^}]*margin/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          if (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always') {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

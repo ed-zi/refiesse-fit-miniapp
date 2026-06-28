@@ -1,0 +1,566 @@
+import { useMemo, useState } from 'react'
+import './App.css'
+
+type Screen =
+  | 'home'
+  | 'onboarding'
+  | 'catalog'
+  | 'workout'
+  | 'plans'
+  | 'locked'
+  | 'paywall'
+  | 'success'
+  | 'progress'
+  | 'profile'
+
+const steps: Array<{ id: Screen; label: string }> = [
+  { id: 'home', label: 'Home: быстрое действие на сегодня' },
+  { id: 'onboarding', label: 'Подбор: понять состояние' },
+  { id: 'catalog', label: 'Каталог: выбрать тренировку' },
+  { id: 'workout', label: 'Тренировка: понять и начать' },
+  { id: 'plans', label: 'Планы: система на 5–7 дней' },
+  { id: 'locked', label: 'Locked: premium закрыт' },
+  { id: 'paywall', label: 'Paywall: ценность + Tribute' },
+  { id: 'success', label: 'Success: доступ открыт' },
+  { id: 'progress', label: 'Прогресс: удержание без давления' },
+  { id: 'profile', label: 'Профиль: подписка и настройки' },
+]
+
+const categories = ['Спина', 'Осанка', 'Кор', 'Расслабление']
+const workouts = [
+  {
+    title: 'Кор без скручиваний',
+    access: 'premium',
+    meta: ['18 мин', 'новичок'],
+    thumb: 'peach',
+    target: 'locked' as Screen,
+  },
+  {
+    title: 'Поясница после сидячего дня',
+    access: 'premium',
+    meta: ['15 мин'],
+    thumb: '',
+    target: 'locked' as Screen,
+  },
+  {
+    title: 'Вечернее расслабление',
+    access: 'free',
+    meta: ['9 мин'],
+    thumb: 'dark',
+    target: 'workout' as Screen,
+  },
+]
+
+function App() {
+  const [screen, setScreen] = useState<Screen>('home')
+  const [selectedGoal, setSelectedGoal] = useState('Шея и плечи зажаты')
+  const [toast, setToast] = useState('')
+
+  const currentStep = useMemo(
+    () => steps.find((step) => step.id === screen)?.label ?? '',
+    [screen],
+  )
+
+  function go(next: Screen) {
+    setScreen(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function showToast(message: string) {
+    setToast(message)
+    window.setTimeout(() => setToast(''), 1300)
+  }
+
+  return (
+    <main className="board">
+      <aside className="brief" aria-label="Навигация по прототипу">
+        <h1>Refiesse Fit Mini App</h1>
+        <p>
+          Рабочий React-прототип в направлении <b>Soft System</b>. Сейчас задача —
+          проверить логику flow до того, как наполнять контентом и подключать Tribute.
+        </p>
+        <p>
+          Активный экран: <b>{currentStep}</b>
+        </p>
+        <div className="steps">
+          {steps.map((step) => (
+            <button
+              className={`step ${screen === step.id ? 'active' : ''}`}
+              key={step.id}
+              onClick={() => go(step.id)}
+              type="button"
+            >
+              {step.label}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <section className="phone" aria-label="Refiesse Fit Mini App prototype">
+        <div className="status">
+          <span>9:41</span>
+          <span>●●● 100%</span>
+        </div>
+        <div className="app-shell">
+          <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
+          {screen === 'home' && <HomeScreen go={go} />}
+          {screen === 'onboarding' && (
+            <OnboardingScreen
+              go={go}
+              selectedGoal={selectedGoal}
+              setSelectedGoal={setSelectedGoal}
+            />
+          )}
+          {screen === 'catalog' && <CatalogScreen go={go} />}
+          {screen === 'workout' && <WorkoutScreen go={go} showToast={showToast} />}
+          {screen === 'plans' && <PlansScreen go={go} />}
+          {screen === 'locked' && <LockedScreen go={go} />}
+          {screen === 'paywall' && <PaywallScreen go={go} />}
+          {screen === 'success' && <SuccessScreen go={go} />}
+          {screen === 'progress' && <ProgressScreen showToast={showToast} />}
+          {screen === 'profile' && <ProfileScreen go={go} />}
+          <BottomNav current={screen} go={go} />
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function TopBar({
+  title = 're.fit',
+  onProfile,
+  onBack,
+  right = 'К',
+}: {
+  title?: string
+  onProfile?: () => void
+  onBack?: () => void
+  right?: string
+}) {
+  return (
+    <div className="topbar">
+      {onBack ? (
+        <button className="back" onClick={onBack} type="button" aria-label="Назад">
+          ←
+        </button>
+      ) : (
+        <div className="brand">
+          {title === 're.fit' ? (
+            <>
+              re<span>.</span>fit
+            </>
+          ) : (
+            title
+          )}
+        </div>
+      )}
+      <button
+        className="avatar"
+        onClick={onProfile}
+        type="button"
+        aria-label="Профиль"
+      >
+        {right}
+      </button>
+    </div>
+  )
+}
+
+function HomeScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar onProfile={() => go('profile')} />
+      <div className="hero hero-tall">
+        <div className="badge">Доступ открыт до 18 июля</div>
+        <h2>Что нужно телу сегодня?</h2>
+        <p>
+          Выберите состояние — я подберу мягкую тренировку на 10–20 минут.
+        </p>
+      </div>
+      <button className="cta full" onClick={() => go('onboarding')} type="button">
+        Подобрать тренировку
+      </button>
+      <div className="chips" aria-label="Категории">
+        {categories.map((category, index) => (
+          <button
+            className={`chip ${index === 0 ? 'active' : ''}`}
+            key={category}
+            onClick={() => go('catalog')}
+            type="button"
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+      <div className="section-title">
+        <h3>Тренировка дня</h3>
+        <small>12 мин</small>
+      </div>
+      <WorkoutCard
+        access="free"
+        meta={['без инвентаря']}
+        onClick={() => go('workout')}
+        title="Мягкая разгрузка шеи и плеч"
+        thumb="dark"
+      />
+      <div className="section-title">
+        <h3>Текущий план</h3>
+        <small>3/7</small>
+      </div>
+      <ProgramCard onClick={() => go('plans')} />
+    </section>
+  )
+}
+
+function OnboardingScreen({
+  go,
+  selectedGoal,
+  setSelectedGoal,
+}: {
+  go: (screen: Screen) => void
+  selectedGoal: string
+  setSelectedGoal: (goal: string) => void
+}) {
+  const options = [
+    ['Шея и плечи зажаты', 'после работы, сидения, дороги'],
+    ['Поясница устала', 'хочется разгрузить мягко'],
+    ['Кор и живот', 'без агрессивных скручиваний'],
+    ['Расслабиться перед сном', 'спокойная вечерняя практика'],
+  ]
+
+  return (
+    <section className="screen">
+      <TopBar onBack={() => go('home')} right="1/4" />
+      <div className="hero">
+        <div className="badge">быстрый подбор</div>
+        <h2>Что сейчас нужно телу?</h2>
+        <p>Выберите основное состояние. Это не диагноз, а мягкий ориентир.</p>
+      </div>
+      {options.map(([title, description]) => (
+        <button
+          className={`option ${selectedGoal === title ? 'active' : ''}`}
+          key={title}
+          onClick={() => setSelectedGoal(title)}
+          type="button"
+        >
+          <span className="radio" />
+          <span>
+            <strong>{title}</strong>
+            <small>{description}</small>
+          </span>
+        </button>
+      ))}
+      <button className="cta full" onClick={() => go('catalog')} type="button">
+        Показать тренировки
+      </button>
+    </section>
+  )
+}
+
+function CatalogScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar title="Каталог" right="⌕" onProfile={() => go('profile')} />
+      <h2>Найти по состоянию</h2>
+      <p className="lead">
+        Тренировки собраны по целям: шея, поясница, кор, мобильность,
+        расслабление.
+      </p>
+      <div className="filter-row">
+        <div className="search">Поиск: поясница, кор...</div>
+        <button className="filter" type="button" aria-label="Фильтры">
+          ≡
+        </button>
+      </div>
+      <div className="chips">
+        {['Все', '5–10 мин', 'Premium', 'Новичкам'].map((chip, index) => (
+          <button className={`chip ${index === 0 ? 'active' : ''}`} key={chip} type="button">
+            {chip}
+          </button>
+        ))}
+      </div>
+      {workouts.map((workout) => (
+        <WorkoutCard
+          access={workout.access}
+          key={workout.title}
+          meta={workout.meta}
+          onClick={() => go(workout.target)}
+          title={workout.title}
+          thumb={workout.thumb}
+        />
+      ))}
+    </section>
+  )
+}
+
+function WorkoutScreen({
+  go,
+  showToast,
+}: {
+  go: (screen: Screen) => void
+  showToast: (message: string) => void
+}) {
+  return (
+    <section className="screen">
+      <TopBar onBack={() => go('catalog')} right="♡" onProfile={() => showToast('Добавлено в избранное')} />
+      <div className="video" />
+      <h2 className="compact-title">Мягкая мобилизация грудного отдела</h2>
+      <p className="lead">
+        Для тех, кто долго сидел и чувствует зажатость в шее, плечах и верхе
+        спины.
+      </p>
+      <div className="facts">
+        <Fact value="14" label="мин" />
+        <Fact value="0" label="инвентарь" />
+        <Fact value="easy" label="уровень" />
+      </div>
+      <div className="note">
+        <b>Осторожно:</b> если есть острая боль, онемение или недавняя травма —
+        не идём через усилие.
+      </div>
+      <button className="cta full" onClick={() => showToast('Тренировка началась')} type="button">
+        Начать тренировку
+      </button>
+      <button className="cta lime full stacked" onClick={() => go('progress')} type="button">
+        Я сделала
+      </button>
+    </section>
+  )
+}
+
+function PlansScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar title="Планы" right="◇" />
+      <h2>Идти по системе</h2>
+      <p className="lead">Планы на 5–7 дней помогают не искать случайные упражнения.</p>
+      <ProgramCard onClick={() => go('workout')} />
+      <WorkoutCard
+        access="premium"
+        meta={['5 дней']}
+        onClick={() => go('paywall')}
+        title="Кор без скручиваний"
+        thumb="peach"
+      />
+    </section>
+  )
+}
+
+function LockedScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar onBack={() => go('catalog')} right="🔒" />
+      <div className="video muted-video" />
+      <h2 className="compact-title">Кор без скручиваний</h2>
+      <p className="lead">Premium-тренировка из плана для глубоких мышц корпуса.</p>
+      <div className="facts">
+        <Fact value="18" label="мин" />
+        <Fact value="0" label="инвентарь" />
+        <Fact value="easy" label="уровень" />
+      </div>
+      <div className="paywall small-paywall">
+        <div>
+          <div className="badge">premium</div>
+          <h3>Откройте доступ, чтобы продолжить</h3>
+          <p className="lead">Эта тренировка входит в Premium-каталог.</p>
+        </div>
+        <button className="cta full" onClick={() => go('paywall')} type="button">
+          Открыть через Tribute
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar onBack={() => go('catalog')} right="✧" />
+      <div className="paywall">
+        <div>
+          <div className="badge">Refiesse Fit Premium</div>
+          <h2>Идти по системе, а не искать посты</h2>
+          <p className="lead">
+            Откройте планы, каталог, прогресс и мягкое движение под ваше
+            состояние.
+          </p>
+          {[
+            '3 мини-плана на 5–7 дней',
+            'Premium-каталог тренировок',
+            'Избранное, история и отметка “Я сделала”',
+          ].map((feature) => (
+            <div className="feature" key={feature}>
+              <span className="check">✓</span>
+              <span>{feature}</span>
+            </div>
+          ))}
+        </div>
+        <div>
+          <button className="cta full" onClick={() => go('success')} type="button">
+            Открыть через Tribute
+          </button>
+          <button className="cta secondary full stacked" onClick={() => go('catalog')} type="button">
+            Продолжить бесплатно
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar title="Доступ" right="✓" />
+      <div className="success">
+        <div className="success-icon">✓</div>
+        <h2 className="compact-title">Доступ открыт</h2>
+        <p className="lead">
+          Premium-планы и тренировки уже доступны. Начните с мягкого маршрута на
+          7 дней.
+        </p>
+      </div>
+      <div className="section-title">
+        <h3>С чего начать</h3>
+        <small>рекомендация</small>
+      </div>
+      <ProgramCard onClick={() => go('plans')} />
+    </section>
+  )
+}
+
+function ProgressScreen({ showToast }: { showToast: (message: string) => void }) {
+  return (
+    <section className="screen">
+      <TopBar title="Прогресс" right="↗" />
+      <div className="hero">
+        <div className="badge">эта неделя</div>
+        <h2>Даже 10 минут считаются</h2>
+        <p>Прогресс поддерживает регулярность, но не наказывает за пропуски.</p>
+      </div>
+      <div className="stats">
+        <Stat value="4" label="тренировки" />
+        <Stat value="62" label="минуты" />
+        <Stat value="3" label="дня подряд" />
+        <Stat value="3/7" label="план" />
+      </div>
+      <button className="cta lime full" onClick={() => showToast('Уже отмечено')} type="button">
+        Я сделала тренировку
+      </button>
+    </section>
+  )
+}
+
+function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
+  return (
+    <section className="screen">
+      <TopBar title="Профиль" onBack={() => go('home')} right="К" />
+      <div className="profile-card">
+        <h3>Катя</h3>
+        <p className="lead">Telegram ID связан</p>
+      </div>
+      <div className="program">
+        <div className="badge">Premium активен</div>
+        <h3>Подписка через Tribute</h3>
+        <p className="lead profile-lead">
+          Доступ открыт до 18 июля. Продление управляется в Tribute.
+        </p>
+        <button className="cta lime full" type="button">
+          Управлять подпиской
+        </button>
+      </div>
+      <button className="cta secondary full" onClick={() => go('onboarding')} type="button">
+        Изменить подбор
+      </button>
+    </section>
+  )
+}
+
+function WorkoutCard({
+  title,
+  access,
+  meta,
+  thumb,
+  onClick,
+}: {
+  title: string
+  access: string
+  meta: string[]
+  thumb?: string
+  onClick: () => void
+}) {
+  return (
+    <button className="workout-card" onClick={onClick} type="button">
+      <span className={`thumb ${thumb ?? ''}`} />
+      <span className="workout-body">
+        <strong>{title}</strong>
+        <span className="meta">
+          <span className={`pill ${access === 'premium' ? 'premium' : 'free'}`}>{access}</span>
+          {meta.map((item) => (
+            <span className="pill" key={item}>
+              {item}
+            </span>
+          ))}
+        </span>
+        <small>{access === 'premium' ? 'Открыть →' : 'Начать →'}</small>
+      </span>
+    </button>
+  )
+}
+
+function ProgramCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="program" onClick={onClick} type="button">
+      <h3>7 дней для спины и осанки</h3>
+      <div className="progress">
+        <span style={{ width: '43%' }} />
+      </div>
+      <p className="program-note">Сегодня: грудной отдел + дыхание</p>
+    </button>
+  )
+}
+
+function Fact({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="fact">
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="stat">
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function BottomNav({ current, go }: { current: Screen; go: (screen: Screen) => void }) {
+  const items: Array<{ id: Screen; icon: string; label: string }> = [
+    { id: 'home', icon: '◌', label: 'Сегодня' },
+    { id: 'catalog', icon: '▦', label: 'Каталог' },
+    { id: 'plans', icon: '◇', label: 'Планы' },
+    { id: 'progress', icon: '↗', label: 'Прогресс' },
+  ]
+
+  return (
+    <nav className="bottom-nav" aria-label="Основная навигация">
+      {items.map((item) => (
+        <button
+          className={current === item.id ? 'active' : ''}
+          key={item.id}
+          onClick={() => go(item.id)}
+          type="button"
+        >
+          <i>{item.icon}</i>
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+export default App
