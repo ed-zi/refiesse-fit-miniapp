@@ -489,6 +489,23 @@ p,
   background: var(--purple);
 }
 
+.checkbox {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 2px solid #d6cfff;
+  display: grid;
+  place-items: center;
+}
+
+.option.active .checkbox::after {
+  content: '✓';
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--purple);
+}
+
 .filter-row {
   display: grid;
   grid-template-columns: 1fr auto;

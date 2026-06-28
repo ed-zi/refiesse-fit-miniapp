@@ -31,7 +31,7 @@ const categories = ['Спина', 'Осанка', 'Кор', 'Расслабле�
 type OnboardingAnswers = {
   goal: string
   time: string
-  equipment: string
+  equipment: string[]
   intensity: string
 }
 
@@ -43,6 +43,7 @@ type OnboardingStep = {
   title: string
   description: string
   options: Array<[string, string]>
+  multi?: boolean
 }
 
 const onboardingSteps: OnboardingStep[] = [
@@ -73,13 +74,14 @@ const onboardingSteps: OnboardingStep[] = [
     key: 'equipment',
     badge: 'инвентарь',
     title: 'Что есть под рукой?',
-    description: 'Если ничего нет — это нормально, большинство практик можно делать без инвентаря.',
+    description: 'Можно выбрать несколько. Если ничего нет — большинство практик без инвентаря.',
     options: [
       ['Без инвентаря', 'достаточно места и коврика по желанию'],
       ['Коврик', 'удобнее для пола и растяжки'],
       ['Резинка', 'можно добавить мягкое сопротивление'],
       ['МФР-ролл', 'для восстановления и расслабления'],
     ],
+    multi: true,
   },
   {
     key: 'intensity',
@@ -97,7 +99,7 @@ const onboardingSteps: OnboardingStep[] = [
 const defaultOnboardingAnswers: OnboardingAnswers = {
   goal: onboardingSteps[0].options[0][0],
   time: onboardingSteps[1].options[1][0],
-  equipment: onboardingSteps[2].options[0][0],
+  equipment: [onboardingSteps[2].options[0][0]],
   intensity: onboardingSteps[3].options[0][0],
 }
 
@@ -308,11 +310,25 @@ function OnboardingScreen({
   setStepIndex: Dispatch<SetStateAction<number>>
 }) {
   const step = onboardingSteps[stepIndex]
-  const selectedValue = answers[step.key]
   const isLastStep = stepIndex === onboardingSteps.length - 1
 
+  function isSelected(value: string): boolean {
+    const answer = answers[step.key]
+    return Array.isArray(answer) ? answer.includes(value) : answer === value
+  }
+
   function choose(value: string) {
-    setAnswers((current) => ({ ...current, [step.key]: value }))
+    if (step.multi) {
+      setAnswers((current) => {
+        const prev = current[step.key] as string[]
+        const next = prev.includes(value)
+          ? prev.filter((v) => v !== value)
+          : [...prev, value]
+        return { ...current, [step.key]: next.length ? next : [value] }
+      })
+    } else {
+      setAnswers((current) => ({ ...current, [step.key]: value }))
+    }
   }
 
   function next() {
@@ -350,12 +366,12 @@ function OnboardingScreen({
       </div>
       {step.options.map(([title, description]) => (
         <button
-          className={`option ${selectedValue === title ? 'active' : ''}`}
+          className={`option ${isSelected(title) ? 'active' : ''} ${step.multi ? 'multi' : ''}`}
           key={title}
           onClick={() => choose(title)}
           type="button"
         >
-          <span className="radio" />
+          <span className={step.multi ? 'checkbox' : 'radio'} />
           <span>
             <strong>{title}</strong>
             <small>{description}</small>
@@ -366,7 +382,7 @@ function OnboardingScreen({
         <strong>Подбор</strong>
         <span>{answers.goal}</span>
         <span>{answers.time}</span>
-        <span>{answers.equipment}</span>
+        <span>{answers.equipment.join(', ')}</span>
         <span>{answers.intensity}</span>
       </div>
       <button className="cta full" onClick={next} type="button">
