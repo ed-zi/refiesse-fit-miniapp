@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { type Dispatch, type SetStateAction, useMemo, useState } from 'react'
 import './App.css'
 
 type Screen =
@@ -27,6 +27,80 @@ const steps: Array<{ id: Screen; label: string }> = [
 ]
 
 const categories = ['Спина', 'Осанка', 'Кор', 'Расслабление']
+
+type OnboardingAnswers = {
+  goal: string
+  time: string
+  equipment: string
+  intensity: string
+}
+
+type OnboardingKey = keyof OnboardingAnswers
+
+type OnboardingStep = {
+  key: OnboardingKey
+  badge: string
+  title: string
+  description: string
+  options: Array<[string, string]>
+}
+
+const onboardingSteps: OnboardingStep[] = [
+  {
+    key: 'goal',
+    badge: 'быстрый подбор',
+    title: 'Что сейчас нужно телу?',
+    description: 'Выберите основное состояние. Это не диагноз, а мягкий ориентир.',
+    options: [
+      ['Шея и плечи зажаты', 'после работы, сидения, дороги'],
+      ['Поясница устала', 'хочется разгрузить мягко'],
+      ['Кор и живот', 'без агрессивных скручиваний'],
+      ['Расслабиться перед сном', 'спокойная вечерняя практика'],
+    ],
+  },
+  {
+    key: 'time',
+    badge: 'время',
+    title: 'Сколько есть времени?',
+    description: 'Подберём практику так, чтобы её реально было сделать сегодня.',
+    options: [
+      ['5–10 минут', 'очень короткая разгрузка'],
+      ['15–20 минут', 'оптимально для домашней практики'],
+      ['25–35 минут', 'если хочется пройти полноценнее'],
+    ],
+  },
+  {
+    key: 'equipment',
+    badge: 'инвентарь',
+    title: 'Что есть под рукой?',
+    description: 'Если ничего нет — это нормально, большинство практик можно делать без инвентаря.',
+    options: [
+      ['Без инвентаря', 'достаточно места и коврика по желанию'],
+      ['Коврик', 'удобнее для пола и растяжки'],
+      ['Резинка', 'можно добавить мягкое сопротивление'],
+      ['МФР-ролл', 'для восстановления и расслабления'],
+    ],
+  },
+  {
+    key: 'intensity',
+    badge: 'режим',
+    title: 'Какой режим комфортен?',
+    description: 'Выберите нагрузку без идеи “потерпеть”. Подбор должен остаться мягким.',
+    options: [
+      ['Очень мягко', 'без перегруза и сложных связок'],
+      ['Обычный домашний темп', 'спокойно, но с ощущением работы'],
+      ['Хочу чуть активнее', 'если есть силы и желание подвигаться больше'],
+    ],
+  },
+]
+
+const defaultOnboardingAnswers: OnboardingAnswers = {
+  goal: onboardingSteps[0].options[0][0],
+  time: onboardingSteps[1].options[1][0],
+  equipment: onboardingSteps[2].options[0][0],
+  intensity: onboardingSteps[3].options[0][0],
+}
+
 const workouts = [
   {
     title: 'Кор без скручиваний',
@@ -53,7 +127,10 @@ const workouts = [
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home')
-  const [selectedGoal, setSelectedGoal] = useState('Шея и плечи зажаты')
+  const [onboardingStep, setOnboardingStep] = useState(0)
+  const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers>(
+    defaultOnboardingAnswers,
+  )
   const [toast, setToast] = useState('')
 
   const currentStep = useMemo(
@@ -62,6 +139,9 @@ function App() {
   )
 
   function go(next: Screen) {
+    if (next === 'onboarding') {
+      setOnboardingStep(0)
+    }
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -106,9 +186,11 @@ function App() {
           {screen === 'home' && <HomeScreen go={go} />}
           {screen === 'onboarding' && (
             <OnboardingScreen
+              answers={onboardingAnswers}
               go={go}
-              selectedGoal={selectedGoal}
-              setSelectedGoal={setSelectedGoal}
+              stepIndex={onboardingStep}
+              setAnswers={setOnboardingAnswers}
+              setStepIndex={setOnboardingStep}
             />
           )}
           {screen === 'catalog' && <CatalogScreen go={go} />}
@@ -213,34 +295,64 @@ function HomeScreen({ go }: { go: (screen: Screen) => void }) {
 }
 
 function OnboardingScreen({
+  answers,
   go,
-  selectedGoal,
-  setSelectedGoal,
+  stepIndex,
+  setAnswers,
+  setStepIndex,
 }: {
+  answers: OnboardingAnswers
   go: (screen: Screen) => void
-  selectedGoal: string
-  setSelectedGoal: (goal: string) => void
+  stepIndex: number
+  setAnswers: Dispatch<SetStateAction<OnboardingAnswers>>
+  setStepIndex: Dispatch<SetStateAction<number>>
 }) {
-  const options = [
-    ['Шея и плечи зажаты', 'после работы, сидения, дороги'],
-    ['Поясница устала', 'хочется разгрузить мягко'],
-    ['Кор и живот', 'без агрессивных скручиваний'],
-    ['Расслабиться перед сном', 'спокойная вечерняя практика'],
-  ]
+  const step = onboardingSteps[stepIndex]
+  const selectedValue = answers[step.key]
+  const isLastStep = stepIndex === onboardingSteps.length - 1
+
+  function choose(value: string) {
+    setAnswers((current) => ({ ...current, [step.key]: value }))
+  }
+
+  function next() {
+    if (isLastStep) {
+      go('catalog')
+      return
+    }
+    setStepIndex((current) => Math.min(current + 1, onboardingSteps.length - 1))
+  }
+
+  function back() {
+    if (stepIndex === 0) {
+      go('home')
+      return
+    }
+    setStepIndex((current) => Math.max(current - 1, 0))
+  }
 
   return (
     <section className="screen">
-      <TopBar onBack={() => go('home')} right="1/4" />
-      <div className="hero">
-        <div className="badge">быстрый подбор</div>
-        <h2>Что сейчас нужно телу?</h2>
-        <p>Выберите основное состояние. Это не диагноз, а мягкий ориентир.</p>
+      <TopBar onBack={back} right={`Шаг ${stepIndex + 1}/4`} />
+      <div className="onboarding-progress" aria-label={`Шаг ${stepIndex + 1} из 4`}>
+        {onboardingSteps.map((item, index) => (
+          <span
+            className={index <= stepIndex ? 'active' : ''}
+            key={item.key}
+            style={{ width: `${100 / onboardingSteps.length}%` }}
+          />
+        ))}
       </div>
-      {options.map(([title, description]) => (
+      <div className="hero">
+        <div className="badge">{step.badge}</div>
+        <h2>{step.title}</h2>
+        <p>{step.description}</p>
+      </div>
+      {step.options.map(([title, description]) => (
         <button
-          className={`option ${selectedGoal === title ? 'active' : ''}`}
+          className={`option ${selectedValue === title ? 'active' : ''}`}
           key={title}
-          onClick={() => setSelectedGoal(title)}
+          onClick={() => choose(title)}
           type="button"
         >
           <span className="radio" />
@@ -250,8 +362,15 @@ function OnboardingScreen({
           </span>
         </button>
       ))}
-      <button className="cta full" onClick={() => go('catalog')} type="button">
-        Показать тренировки
+      <div className="selection-summary">
+        <strong>Подбор</strong>
+        <span>{answers.goal}</span>
+        <span>{answers.time}</span>
+        <span>{answers.equipment}</span>
+        <span>{answers.intensity}</span>
+      </div>
+      <button className="cta full" onClick={next} type="button">
+        {isLastStep ? 'Показать тренировки' : 'Дальше'}
       </button>
     </section>
   )

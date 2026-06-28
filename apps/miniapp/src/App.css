@@ -125,9 +125,14 @@
 }
 
 .avatar {
+  min-width: 40px;
+  width: auto;
+  padding: 0 12px;
   border: 0;
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--lav), var(--lime));
   color: var(--ink);
+  font-size: 12px;
 }
 
 .back {
@@ -395,6 +400,45 @@ p,
   height: 100%;
   border-radius: 999px;
   background: #24451f;
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  margin: -4px 0 14px;
+}
+
+.onboarding-progress span {
+  height: 6px;
+  border-radius: 999px;
+  background: #ece8f7;
+}
+
+.onboarding-progress span.active {
+  background: var(--purple);
+}
+
+.selection-summary {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 12px 14px;
+  background: #faf9ff;
+  margin: 12px 0 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.selection-summary strong {
+  font-size: 12px;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.selection-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .option {
