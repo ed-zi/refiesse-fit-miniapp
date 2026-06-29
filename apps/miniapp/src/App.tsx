@@ -177,10 +177,6 @@ function App() {
       </aside>
 
       <section className="phone" aria-label="Refiesse Fit Mini App prototype">
-        <div className="status">
-          <span>9:41</span>
-          <span>●●● 100%</span>
-        </div>
         <div className="app-shell">
           <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
           {screen === 'home' && <HomeScreen go={go} />}

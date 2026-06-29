@@ -70,18 +70,9 @@
   position: relative;
 }
 
-.status {
-  height: 34px;
-  padding: 12px 24px 0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .app-shell {
   position: relative;
-  height: calc(100% - 34px);
+  height: 100%;
   overflow: hidden;
 }
 
