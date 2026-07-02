@@ -665,13 +665,14 @@ function BottomNav({ current, go }: { current: Screen; go: (screen: Screen) => v
     <nav className="bottom-nav" aria-label="Основная навигация">
       {items.map((item) => (
         <button
+          aria-current={current === item.id ? 'page' : undefined}
           className={current === item.id ? 'active' : ''}
           key={item.id}
           onClick={() => go(item.id)}
           type="button"
         >
-          <i>{item.icon}</i>
-          {item.label}
+          <i aria-hidden="true">{item.icon}</i>
+          <span>{item.label}</span>
         </button>
       ))}
     </nav>
