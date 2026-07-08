@@ -1,0 +1,20 @@
+{
+  "name": "refiesse-fit-miniapp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Refiesse Fit Mini App — монорепо (Telegram Mini App).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/miniapp",
+    "build": "npm run build --workspace apps/miniapp",
+    "lint": "npm run lint --workspace apps/miniapp",
+    "typecheck": "tsc -b apps/miniapp packages/shared",
+    "preview": "npm run preview --workspace apps/miniapp"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

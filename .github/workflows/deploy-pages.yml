@@ -1,0 +1,64 @@
+# Деплой GitHub Pages из CI (заменяет ручной gh-pages).
+# Собирает apps/miniapp с GITHUB_PAGES=true (vite base = '/refiesse-fit-miniapp/')
+# и публикует dist через официальный pipeline actions/deploy-pages.
+name: Deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+  # Позволяет запустить деплой вручную из вкладки Actions.
+  workflow_dispatch:
+
+# Разрешения, необходимые actions/deploy-pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Только один активный деплой Pages; новые пуши в очередь без отмены текущего.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build miniapp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (GitHub Pages base)
+        run: npm run build
+        env:
+          GITHUB_PAGES: 'true'
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/miniapp/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

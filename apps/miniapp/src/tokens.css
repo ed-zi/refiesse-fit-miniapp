@@ -1,0 +1,174 @@
+/**
+ * Refiesse Fit Mini App — Design Tokens
+ * Направление: Soft System (wellness, спокойный тон, без fitness-агрессии).
+ *
+ * Единый источник значений дизайн-системы. Файл ТОЛЬКО добавляет CSS-переменные
+ * и не переопределяет существующие стили в App.css / index.css.
+ *
+ * Legacy-алиасы из index.css (--ink, --muted, --canvas, --lav, --purple, --lime,
+ * --lime-ink, --coral, --line, --shadow) сохранены как есть; ниже даны их
+ * канонические имена (--color-*). Значения синхронизированы 1:1.
+ *
+ * Документация: docs/design/ui-tokens.md
+ */
+
+:root {
+  /* ==========================================================================
+     ЦВЕТА — база
+     ========================================================================== */
+  --color-white: #ffffff;
+  --color-bg: #f6f4fb;            /* фон приложения / canvas (=--canvas) */
+  --color-surface: #ffffff;      /* карточки, основные поверхности */
+  --color-surface-subtle: #faf9ff; /* мягкая лавандовая поверхность (search, steps, fact-icon) */
+
+  /* ЦВЕТА — бренд / акценты */
+  --color-lavender: #f1efff;     /* лавандовый фон секций (=--lav) */
+  --color-lavender-ink: #403a4d; /* текст на лаванде (chips, features) */
+  --color-cta: #8f73ea;          /* фиолетовый CTA / active (=--purple) */
+  --color-cta-ink: #ffffff;      /* текст на фиолетовом CTA */
+  --color-success: #d5ffc7;      /* салатовый success / progress / lime (=--lime) */
+  --color-success-ink: #24451f;  /* текст на салатовом (=--lime-ink) */
+  --color-success-note: #315d2a; /* вторичный текст на салатовом (program-note) */
+  --color-coral: #ff8562;        /* коралловый акцент / premium labels (=--coral) */
+
+  /* ЦВЕТА — текст */
+  --color-text: #1e1e1e;         /* основной текст / заголовки (=--ink) */
+  --color-muted: #67656f;        /* вторичный текст / описания (=--muted) */
+
+  /* ЦВЕТА — линии и границы */
+  --color-line: #ece8f7;         /* базовая граница (=--line) */
+  --color-line-lavender: #d8d0ff;/* активная лавандовая граница (chip/option/step active) */
+  --color-line-neutral: #dbd6e8; /* граница secondary-кнопки */
+  --color-ring: #d6cfff;         /* обводка radio (не выбран) */
+
+  /* ЦВЕТА — pill статусов доступа */
+  --color-pill-neutral-bg: #f6f4fb;  /* нейтральный pill (длительность, уровень) */
+  --color-pill-neutral-text: #67656f;
+  --color-pill-free-bg: #edffe8;     /* free */
+  --color-pill-free-text: #387031;
+  --color-pill-premium-bg: #fff0ea;  /* premium */
+  --color-pill-premium-text: #ff8562;
+
+  /* ЦВЕТА — состояния (state specs) */
+  --color-warning-bg: #fff8f5;   /* мягкая плашка осторожности / error-фон */
+  --color-warning-border: #ffe0d5;
+  --color-warning-text: #604135;
+  --color-skeleton-base: #f1efff;    /* скелетон-плейсхолдер (лаванда) */
+  --color-skeleton-shine: #faf9ff;   /* блик анимации скелетона */
+  --color-overlay: rgba(30, 25, 48, 0.32); /* затемнение под locked/paywall */
+
+  /* ЦВЕТА — прочее */
+  --color-toast-bg: #1e1e1e;
+  --color-toast-text: #ffffff;
+  --color-progress-track: rgba(36, 69, 31, 0.15); /* трек прогресса на салатовом */
+  --color-progress-fill: #24451f;
+
+  /* ==========================================================================
+     ТИПОГРАФИКА
+     ========================================================================== */
+  --font-sans: Inter, TildaSans, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+
+  /* Размеры (роль → px) */
+  --font-size-display: 34px; /* hero H2 (uppercase) */
+  --font-size-h1: 30px;      /* заголовок экрана / compact-title */
+  --font-size-stat: 32px;    /* крупные числа stat */
+  --font-size-h2: 21px;      /* section H3 */
+  --font-size-h3: 16px;      /* заголовок карточки */
+  --font-size-body: 14px;    /* основной текст / lead */
+  --font-size-small: 12px;   /* small, meta, chips */
+  --font-size-tiny: 11px;    /* badge, fact */
+  --font-size-micro: 10px;   /* pills, nav labels */
+
+  /* Веса */
+  --font-weight-regular: 400;
+  --font-weight-medium: 700;
+  --font-weight-bold: 800;
+  --font-weight-black: 900;
+
+  /* Межстрочные интервалы */
+  --line-height-tight: 1;      /* крупные заголовки / числа */
+  --line-height-display: 0.98; /* hero H2 */
+  --line-height-heading: 1.06; /* H3 */
+  --line-height-snug: 1.12;    /* заголовок карточки */
+  --line-height-body: 1.45;    /* основной текст */
+  --line-height-relaxed: 1.5;  /* длинные абзацы */
+
+  /* Трекинг (letter-spacing) */
+  --letter-spacing-display: -0.07em; /* uppercase заголовки */
+  --letter-spacing-heading: -0.045em;/* H3 */
+  --letter-spacing-tight: -0.03em;   /* заголовок карточки */
+  --letter-spacing-wide: 0.04em;     /* uppercase caption (selection-summary) */
+
+  /* ==========================================================================
+     РАДИУСЫ — большие скругления Soft System
+     ========================================================================== */
+  --radius-sm: 16px;    /* step, мелкие плашки */
+  --radius-md: 18px;    /* fact, toast */
+  --radius-lg: 20px;    /* thumb */
+  --radius-xl: 22px;    /* note, selection-summary, nav-button */
+  --radius-2xl: 24px;   /* option, stat */
+  --radius-card: 26px;  /* workout-card */
+  --radius-3xl: 28px;   /* program, profile-card */
+  --radius-4xl: 30px;   /* brief, bottom-nav */
+  --radius-hero: 32px;  /* hero, video */
+  --radius-5xl: 34px;   /* paywall, success */
+  --radius-phone: 48px; /* рамка телефона */
+  --radius-pill: 999px; /* pill-кнопки, chips, badges, progress */
+  --radius-circle: 50%; /* аватар, radio, иконки */
+
+  /* ==========================================================================
+     ОТСТУПЫ — spacing scale (база 2px)
+     ========================================================================== */
+  --space-3xs: 4px;
+  --space-2xs: 6px;
+  --space-xs: 8px;
+  --space-sm: 10px;
+  --space-md: 12px;
+  --space-base: 14px;
+  --space-lg: 16px;
+  --space-xl: 18px;
+  --space-2xl: 20px;
+  --space-3xl: 24px;
+  --space-4xl: 28px;
+
+  /* ==========================================================================
+     ТЕНИ
+     ========================================================================== */
+  --shadow-stat: 0 8px 24px rgba(44, 38, 70, 0.06);  /* stat / profile-card */
+  --shadow-card: 0 12px 30px rgba(44, 38, 70, 0.07); /* workout-card */
+  --shadow-soft: 0 18px 42px rgba(44, 38, 70, 0.1);  /* мягкая тень (=--shadow) */
+  --shadow-lift: 0 14px 34px rgba(44, 38, 70, 0.12); /* success-icon */
+  --shadow-nav: 0 16px 36px rgba(44, 38, 70, 0.13);  /* bottom-nav */
+  --shadow-cta: 0 12px 28px rgba(143, 115, 234, 0.28); /* фиолетовый CTA */
+  --shadow-phone: 0 24px 70px rgba(30, 25, 48, 0.22);  /* рамка телефона */
+
+  /* ==========================================================================
+     РАЗМЕРЫ / TOUCH-ЗОНЫ (нижняя граница 44px)
+     ========================================================================== */
+  --size-touch-min: 44px;  /* минимальная touch-зона */
+  --size-cta: 50px;        /* высота основного CTA */
+  --size-control: 48px;    /* search / filter */
+  --size-chip: 40px;       /* высота chip */
+  --size-avatar: 40px;     /* аватар / back */
+  --size-nav: 74px;        /* высота bottom-nav */
+  --size-nav-item: 58px;   /* touch-зона кнопки навигации (>=44px) */
+  --size-icon: 28px;       /* иконка в навигации */
+  --size-radio: 24px;      /* radio */
+
+  /* ==========================================================================
+     АНИМАЦИЯ
+     ========================================================================== */
+  --transition-fast: 0.18s ease; /* nav / интерактив */
+  --transition-toast: 0.2s;      /* появление toast */
+
+  /* ==========================================================================
+     ГРАДИЕНТЫ (декоративные превью)
+     ========================================================================== */
+  --gradient-thumb: linear-gradient(135deg, #d5ffc7, #f1efff);
+  --gradient-thumb-dark: linear-gradient(135deg, #34462d, #a18476 62%, #f1efff);
+  --gradient-thumb-peach: linear-gradient(135deg, #fff7ed, #caa77d, #f1efff);
+  --gradient-video: linear-gradient(135deg, #39492f, #d1b69b 58%, #f1efff);
+  --gradient-avatar: linear-gradient(135deg, #f1efff, #d5ffc7);
+  --gradient-success: linear-gradient(135deg, #d5ffc7, #f1efff);
+}

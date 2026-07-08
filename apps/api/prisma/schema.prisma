@@ -1,0 +1,237 @@
+// Refiesse Fit Mini App — Prisma schema (DRAFT)
+//
+// Статус: черновик к задаче S0-3. Синтаксически корректен, но применять
+// (prisma migrate) сейчас НЕ нужно — инфраструктуру apps/api ставит другой агент.
+// Источник истины по полям и связям: docs/tech/data-model.md и MVP-ТЗ (раздел 5).
+//
+// Ключевые правила:
+//   - Workout.equipment — массив (String[]), не строка.
+//   - Доступ определяется активной Subscription (status=active И expiresAt>now),
+//     а НЕ полем на User.
+//   - Content matrix (S0-5) — источник полей Workout.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+// Уровень сложности тренировки/плана.
+enum WorkoutLevel {
+  beginner
+  medium
+  advanced
+}
+
+// Тип доступа к единице контента (workout / program).
+enum AccessType {
+  free
+  premium
+}
+
+// Статус подписки пользователя.
+enum SubscriptionStatus {
+  active    // подписка активна
+  cancelled // отменена пользователем/Tribute, но может действовать до expiresAt
+  expired   // срок истёк
+}
+
+// Тип события Tribute (webhook).
+enum TributeEventType {
+  new_subscription
+  renewed_subscription
+  cancelled_subscription
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+// Пользователь Mini App. Идентифицируется по telegram_user_id из initData.
+// Отдельной регистрации нет: find-or-create при первой валидной подписи.
+model User {
+  id             String   @id @default(cuid())
+  telegramUserId BigInt   @unique @map("telegram_user_id")
+  firstName      String?  @map("first_name")
+  lastName       String?  @map("last_name")
+  username       String?
+  languageCode   String?  @map("language_code")
+
+  // Результат онбординга (подбор). equipment — мультивыбор (массив).
+  onboardingGoal      String?  @map("onboarding_goal")
+  onboardingTime      String?  @map("onboarding_time")
+  onboardingEquipment String[] @map("onboarding_equipment")
+  onboardingIntensity String?  @map("onboarding_intensity")
+  onboardingUpdatedAt DateTime? @map("onboarding_updated_at")
+
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subscription   Subscription?
+  progressEntries ProgressEntry[]
+  favorites      Favorite[]
+
+  @@map("users")
+}
+
+// Категория каталога (Спина / Осанка / Кор / Расслабление и т.п.).
+model Category {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  title     String
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  workouts  Workout[]
+
+  @@map("categories")
+}
+
+// Тренировка. Поля соответствуют content matrix (S0-5).
+model Workout {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  title       String
+  goal        String       // основное состояние/цель (соответствует шагу onboarding)
+  durationMin Int          @map("duration_min")
+  level       WorkoutLevel @default(beginner)
+  equipment   String[]     // массив инвентаря (мультивыбор)
+  access      AccessType   @default(free) // free/premium вместо булева is_premium
+  videoUrl    String?      @map("video_url") // отдаётся только при наличии доступа
+  description String
+  cautions    String       // блок осторожностей, всегда показывается
+  thumbColor  String?      @map("thumb_color") // визуальный ключ карточки (Soft System)
+  isPublished Boolean      @default(true) @map("is_published")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  categoryId  String       @map("category_id")
+  category    Category     @relation(fields: [categoryId], references: [id])
+
+  programDays     ProgramDay[]
+  progressEntries ProgressEntry[]
+  favorites       Favorite[]
+
+  @@index([categoryId])
+  @@index([access])
+  @@index([level])
+  @@index([durationMin])
+  @@map("workouts")
+}
+
+// Мини-план (программа) на несколько дней.
+model Program {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  description String?
+  daysTotal   Int        @map("days_total")
+  access      AccessType @default(free)
+  isPublished Boolean    @default(true) @map("is_published")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  days        ProgramDay[]
+
+  @@index([access])
+  @@map("programs")
+}
+
+// День плана. Связывает Program с конкретной Workout (workout опционален —
+// день может быть «отдыхом»/чек-ином без тренировки).
+model ProgramDay {
+  id        String   @id @default(cuid())
+  programId String   @map("program_id")
+  dayIndex  Int      @map("day_index") // 1..daysTotal
+  title     String
+  workoutId String?  @map("workout_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  program   Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  workout   Workout? @relation(fields: [workoutId], references: [id])
+
+  @@unique([programId, dayIndex])
+  @@index([workoutId])
+  @@map("program_days")
+}
+
+// Запись «Я сделала». Идемпотентна по (user, workout, календарный день).
+model ProgressEntry {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  workoutId   String   @map("workout_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+  durationMin Int      @map("duration_min") // снимок длительности на момент выполнения
+  entryDate   DateTime @db.Date @map("entry_date") // календарный день для дедупликации
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout Workout @relation(fields: [workoutId], references: [id])
+
+  // Не задваивать «Я сделала» за один день по одной тренировке.
+  @@unique([userId, workoutId, entryDate])
+  @@index([userId])
+  @@index([userId, completedAt])
+  @@map("progress_entries")
+}
+
+// Избранное (toggle).
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  workoutId String   @map("workout_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout Workout @relation(fields: [workoutId], references: [id])
+
+  @@unique([userId, workoutId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+// Подписка пользователя. Единственный источник истины по доступу.
+// Доступ = status=active И expiresAt>now.
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique @map("user_id")
+  status                SubscriptionStatus @default(expired)
+  expiresAt             DateTime?          @map("expires_at")
+  tributeSubscriptionId String?            @map("tribute_subscription_id")
+  startedAt             DateTime?          @map("started_at")
+  cancelledAt           DateTime?          @map("cancelled_at")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
+  @@index([tributeSubscriptionId])
+  @@map("subscriptions")
+}
+
+// Лог событий Tribute для идемпотентности и разбора инцидентов.
+// Связь с пользователем — по telegramUserId (User может ещё не существовать
+// на момент приёма события).
+model TributeEvent {
+  id             String           @id @default(cuid())
+  eventId        String           @unique @map("event_id") // idempotency key от Tribute
+  type           TributeEventType
+  telegramUserId BigInt?          @map("telegram_user_id")
+  payload        Json
+  signatureOk    Boolean          @map("signature_ok")
+  processedAt    DateTime?        @map("processed_at") // null = принято, но не применено
+  error          String?          // причина, если применение не удалось
+  receivedAt     DateTime         @default(now()) @map("received_at")
+
+  @@index([telegramUserId])
+  @@index([type])
+  @@map("tribute_events")
+}

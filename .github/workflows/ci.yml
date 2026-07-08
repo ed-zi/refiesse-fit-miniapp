@@ -1,0 +1,40 @@
+# CI: lint + typecheck + build на каждый PR и push.
+# PR без зелёного CI не должен мержиться (защита ветки настраивается в Settings репозитория).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# Отменяем предыдущие запуски для той же ветки/PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint · Typecheck · Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

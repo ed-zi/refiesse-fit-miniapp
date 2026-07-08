@@ -1,0 +1,12 @@
+{
+  // Наследует общую строгую конфигурацию монорепо.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+    "noEmit": false
+  },
+  "include": ["src"]
+}
