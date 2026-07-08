@@ -70,7 +70,7 @@ refiesse-fit-miniapp/
 
 ## 3. Схема деплоя
 
-**[РЕШЕНИЕ]:**
+**[РЕШЕНИЕ — подтверждено Эдом 2026-07-08]:**
 - **Frontend → Cloudflare Pages** (production/staging).
 - **API → Railway** (Node-сервис).
 - **PostgreSQL → managed Postgres на Railway** (тот же провайдер, что и API).
