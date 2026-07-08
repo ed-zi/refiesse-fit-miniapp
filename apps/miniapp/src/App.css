@@ -18,10 +18,9 @@
 
 .brief h1 {
   margin: 0 0 12px;
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: -0.07em;
-  text-transform: uppercase;
+  font-size: 28px;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
 }
 
 .brief p {
@@ -80,7 +79,7 @@
   height: 100%;
   overflow: auto;
   scrollbar-width: none;
-  padding: 18px 20px 100px;
+  padding: 18px 20px 124px;
 }
 
 .screen::-webkit-scrollbar {
@@ -176,14 +175,14 @@
 
 h2 {
   margin: 0 0 10px;
-  font-size: 34px;
-  line-height: 0.98;
-  letter-spacing: -0.07em;
-  text-transform: uppercase;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
 }
 
 .compact-title {
-  font-size: 30px;
+  font-size: 25px;
 }
 
 h3 {
@@ -228,6 +227,13 @@ p,
 .cta.lime {
   background: var(--lime);
   color: var(--lime-ink);
+  box-shadow: none;
+}
+
+.cta.ghost {
+  background: transparent;
+  color: var(--purple);
+  border: 1px solid #d9d0ff;
   box-shadow: none;
 }
 
@@ -276,7 +282,7 @@ p,
 }
 
 .section-title small {
-  color: var(--purple);
+  color: #6d4fd8;
   font-size: 12px;
   font-weight: 900;
 }
@@ -306,11 +312,11 @@ p,
 }
 
 .thumb.dark {
-  background: linear-gradient(135deg, #34462d, #a18476 62%, #f1efff);
+  background: linear-gradient(135deg, #a893ef, #d9d0ff 62%, #f1efff);
 }
 
 .thumb.peach {
-  background: linear-gradient(135deg, #fff7ed, #caa77d, #f1efff);
+  background: linear-gradient(135deg, #ffe3d6, #ffd0ba 55%, #f1efff);
 }
 
 .thumb::before {
@@ -352,7 +358,7 @@ p,
 
 .pill.premium {
   background: #fff0ea;
-  color: var(--coral);
+  color: #c9502a;
 }
 
 .pill.free {
@@ -489,14 +495,25 @@ p,
 
 .search {
   height: 48px;
-  border: 1px solid var(--line);
+  border: 1px dashed #d9d3ef;
   border-radius: 999px;
   padding: 0 16px;
   display: flex;
   align-items: center;
+  gap: 8px;
   background: #faf9ff;
-  color: var(--muted);
+  color: #8d8a97;
   font-weight: 700;
+  font-size: 13px;
+}
+
+.soon {
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--lav);
+  color: #6d4fd8;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .filter {
@@ -511,7 +528,7 @@ p,
 .video {
   height: 214px;
   border-radius: 32px;
-  background: linear-gradient(135deg, #39492f, #d1b69b 58%, #f1efff);
+  background: linear-gradient(135deg, #b3a1f0, #e6e0ff 55%, #d5ffc7);
   position: relative;
   overflow: hidden;
   margin-bottom: 16px;
@@ -535,8 +552,13 @@ p,
 }
 
 .muted-video {
-  filter: saturate(0.65);
-  opacity: 0.78;
+  filter: saturate(0.55);
+  opacity: 0.85;
+}
+
+.muted-video::after {
+  content: '🔒';
+  font-size: 22px;
 }
 
 .facts {
@@ -604,6 +626,13 @@ p,
 .paywall > * {
   position: relative;
   z-index: 1;
+}
+
+.price-note {
+  text-align: center;
+  font-size: 12px;
+  color: #565360;
+  margin: 0 0 10px;
 }
 
 .feature {

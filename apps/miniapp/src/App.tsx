@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useMemo, useState } from 'react'
+import { type Dispatch, type ReactNode, type SetStateAction, useMemo, useState } from 'react'
 import './App.css'
 
 type Screen =
@@ -360,10 +360,9 @@ function OnboardingScreen({
       ))}
       <div className="selection-summary">
         <strong>Подбор</strong>
-        <span>{answers.goal}</span>
-        <span>{answers.time}</span>
-        <span>{answers.equipment}</span>
-        <span>{answers.intensity}</span>
+        {onboardingSteps.slice(0, stepIndex + 1).map((item) => (
+          <span key={item.key}>{answers[item.key]}</span>
+        ))}
       </div>
       <button className="cta full" onClick={next} type="button">
         {isLastStep ? 'Показать тренировки' : 'Дальше'}
@@ -382,7 +381,9 @@ function CatalogScreen({ go }: { go: (screen: Screen) => void }) {
         расслабление.
       </p>
       <div className="filter-row">
-        <div className="search">Поиск: поясница, кор...</div>
+        <div className="search">
+          Поиск по состоянию <span className="soon">скоро</span>
+        </div>
         <button className="filter" type="button" aria-label="Фильтры">
           ≡
         </button>
@@ -436,7 +437,7 @@ function WorkoutScreen({
       <button className="cta full" onClick={() => showToast('Тренировка началась')} type="button">
         Начать тренировку
       </button>
-      <button className="cta lime full stacked" onClick={() => go('progress')} type="button">
+      <button className="cta ghost full stacked" onClick={() => go('progress')} type="button">
         Я сделала
       </button>
     </section>
@@ -511,8 +512,9 @@ function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
           ))}
         </div>
         <div>
+          <p className="price-note">500 ₽ в месяц. Продление и отмена — в Tribute.</p>
           <button className="cta full" onClick={() => go('success')} type="button">
-            Открыть через Tribute
+            Открыть за 500 ₽/мес
           </button>
           <button className="cta secondary full stacked" onClick={() => go('catalog')} type="button">
             Продолжить бесплатно
@@ -653,12 +655,61 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
+const navIconProps = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2.2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const
+
 function BottomNav({ current, go }: { current: Screen; go: (screen: Screen) => void }) {
-  const items: Array<{ id: Screen; icon: string; label: string }> = [
-    { id: 'home', icon: '◌', label: 'Сегодня' },
-    { id: 'catalog', icon: '▦', label: 'Каталог' },
-    { id: 'plans', icon: '◇', label: 'Планы' },
-    { id: 'progress', icon: '↗', label: 'Прогресс' },
+  const items: Array<{ id: Screen; icon: ReactNode; label: string }> = [
+    {
+      id: 'home',
+      icon: (
+        <svg {...navIconProps} aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+      ),
+      label: 'Сегодня',
+    },
+    {
+      id: 'catalog',
+      icon: (
+        <svg {...navIconProps} aria-hidden="true">
+          <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
+        </svg>
+      ),
+      label: 'Каталог',
+    },
+    {
+      id: 'plans',
+      icon: (
+        <svg {...navIconProps} aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+          <path d="M8 2.5v4M16 2.5v4M3.5 10.5h17" />
+        </svg>
+      ),
+      label: 'Планы',
+    },
+    {
+      id: 'progress',
+      icon: (
+        <svg {...navIconProps} aria-hidden="true">
+          <path d="M3.5 17.5l5.5-5.5 3.5 3.5 7.5-7.5" />
+          <path d="M14.5 8h5.5v5.5" />
+        </svg>
+      ),
+      label: 'Прогресс',
+    },
   ]
 
   return (
