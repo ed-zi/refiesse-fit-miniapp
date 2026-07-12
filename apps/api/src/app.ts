@@ -41,6 +41,7 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   // CORS: явный origin из env; если не задан (dev) — разрешаем всё.
   await app.register(cors, {
     origin: config.corsOrigin ?? true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
 
   await app.register(fastifyJwt, {

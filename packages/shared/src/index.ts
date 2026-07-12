@@ -48,6 +48,11 @@ export interface Workout {
   categorySlug: string
   /** Визуальный ключ карточки в Soft System (peach / lavender / dark …). */
   thumbColor?: string | null
+  /**
+   * Вычислено бэкендом: контент закрыт для текущего пользователя
+   * (premium без активного доступа). В списках каталога может отсутствовать.
+   */
+  isLocked?: boolean
 }
 
 /** День внутри мини-плана. Тренировка опциональна — день может быть чек-ином/отдыхом. */
@@ -133,4 +138,61 @@ export interface UserProfile {
   /** Сохранённый подбор; null — онбординг ещё не пройден. */
   onboarding: OnboardingAnswers | null
   access: AccessStatus
+}
+
+// ---------------------------------------------------------------------------
+// Контракт HTTP API (S2): вспомогательные типы запросов/ответов
+// ---------------------------------------------------------------------------
+
+/** Ответ POST /auth/telegram. */
+export interface AuthSession {
+  /** Bearer JWT (~1 час). */
+  token: string
+  /** Время жизни токена в секундах. */
+  expiresIn: number
+  user: UserProfile
+}
+
+/** Тело ошибки API: { error: { code, message } }. */
+export interface ApiErrorPayload {
+  code: string
+  message: string
+}
+
+export interface ApiErrorResponse {
+  error: ApiErrorPayload
+}
+
+/** Query-параметры GET /catalog. */
+export interface CatalogQuery {
+  /** Category.slug. */
+  category?: string
+  /** Максимальная длительность в минутах. */
+  maxDuration?: number
+  /** Только premium (true) или только free (false). */
+  premium?: boolean
+  level?: WorkoutLevel
+}
+
+/** Элемент истории «Я сделала» (GET /progress → entries). */
+export interface ProgressHistoryEntry {
+  workoutSlug: string
+  workoutTitle: string
+  /** ISO-строка. */
+  completedAt: string
+  durationMin: number
+}
+
+/** Полный ответ GET /progress: метрики + короткая история. */
+export interface ProgressOverview {
+  summary: ProgressSummary
+  entries: ProgressHistoryEntry[]
+}
+
+/** Результат POST /favorites (toggle). */
+export interface FavoriteToggleResult {
+  /** true — тренировка теперь в избранном. */
+  favorited: boolean
+  /** Актуальный полный список slug'ов избранного. */
+  slugs: string[]
 }

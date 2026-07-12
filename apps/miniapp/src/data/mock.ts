@@ -6,6 +6,7 @@ import type {
   Category,
   OnboardingAnswers,
   Program,
+  ProgressHistoryEntry,
   ProgressSummary,
   UserProfile,
   Workout,
@@ -16,10 +17,10 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const mockCategories: Category[] = [
-  { id: 'cat-back', slug: 'back', title: 'Спина', sortOrder: 0 },
-  { id: 'cat-posture', slug: 'posture', title: 'Осанка', sortOrder: 1 },
-  { id: 'cat-core', slug: 'core', title: 'Кор', sortOrder: 2 },
-  { id: 'cat-relax', slug: 'relax', title: 'Расслабление', sortOrder: 3 },
+  { id: 'cat-back', slug: 'spina', title: 'Спина', sortOrder: 0 },
+  { id: 'cat-posture', slug: 'osanka', title: 'Осанка', sortOrder: 1 },
+  { id: 'cat-core', slug: 'kor', title: 'Кор', sortOrder: 2 },
+  { id: 'cat-relax', slug: 'relaxation', title: 'Расслабление', sortOrder: 3 },
 ]
 
 export const mockWorkouts: Workout[] = [
@@ -37,7 +38,7 @@ export const mockWorkouts: Workout[] = [
       'Короткая практика для тех, кто провёл день за компьютером и чувствует напряжение в шее и плечах.',
     cautions:
       'Если есть острая боль, онемение или недавняя травма — не идём через усилие.',
-    categorySlug: 'back',
+    categorySlug: 'spina',
     thumbColor: 'dark',
   },
   {
@@ -54,7 +55,7 @@ export const mockWorkouts: Workout[] = [
       'Для тех, кто долго сидел и чувствует зажатость в шее, плечах и верхе спины.',
     cautions:
       'Если есть острая боль, онемение или недавняя травма — не идём через усилие.',
-    categorySlug: 'posture',
+    categorySlug: 'osanka',
     thumbColor: null,
   },
   {
@@ -70,7 +71,7 @@ export const mockWorkouts: Workout[] = [
     description: 'Premium-тренировка из плана для глубоких мышц корпуса.',
     cautions:
       'Без агрессивных скручиваний. При дискомфорте в пояснице уменьшайте амплитуду.',
-    categorySlug: 'core',
+    categorySlug: 'kor',
     thumbColor: 'peach',
   },
   {
@@ -86,7 +87,7 @@ export const mockWorkouts: Workout[] = [
     description: 'Мягкая разгрузка поясницы без резких прогибов и рывков.',
     cautions:
       'При простреле или острой боли практику откладываем и не терпим через боль.',
-    categorySlug: 'back',
+    categorySlug: 'spina',
     thumbColor: null,
   },
   {
@@ -101,7 +102,7 @@ export const mockWorkouts: Workout[] = [
     videoUrl: null,
     description: 'Спокойная вечерняя практика, чтобы отпустить день и замедлиться.',
     cautions: 'Все положения — комфортные; головокружение — сигнал остановиться.',
-    categorySlug: 'relax',
+    categorySlug: 'relaxation',
     thumbColor: 'dark',
   },
 ]
@@ -158,6 +159,34 @@ export const mockProgress: ProgressSummary = {
   streakDays: 3,
   planProgress: { done: 3, total: 7 },
 }
+
+/** Короткая история «Я сделала» (соответствует entries из GET /progress). */
+export const mockProgressEntries: ProgressHistoryEntry[] = [
+  {
+    workoutSlug: 'chest-mobility',
+    workoutTitle: 'Мягкая мобилизация грудного отдела',
+    completedAt: '2026-07-11T19:10:00.000Z',
+    durationMin: 14,
+  },
+  {
+    workoutSlug: 'neck-release',
+    workoutTitle: 'Мягкая разгрузка шеи и плеч',
+    completedAt: '2026-07-10T18:40:00.000Z',
+    durationMin: 12,
+  },
+  {
+    workoutSlug: 'lower-back-relief',
+    workoutTitle: 'Поясница после сидячего дня',
+    completedAt: '2026-07-09T20:05:00.000Z',
+    durationMin: 15,
+  },
+  {
+    workoutSlug: 'evening-relax',
+    workoutTitle: 'Вечернее расслабление',
+    completedAt: '2026-07-08T21:30:00.000Z',
+    durationMin: 9,
+  },
+]
 
 export const mockUser: UserProfile = {
   id: 'user-kate',

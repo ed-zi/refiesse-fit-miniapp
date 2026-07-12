@@ -10,7 +10,7 @@ import type {
   Category,
   OnboardingAnswers,
   Program,
-  ProgressSummary,
+  ProgressOverview,
   UserProfile,
   Workout,
   WorkoutLevel,
@@ -24,6 +24,7 @@ import {
   onboardingSteps,
   paywallFeatures,
 } from './data/mock'
+import { onboardingToCatalogQuery } from './data/recommendations'
 import './App.css'
 
 type Screen =
@@ -57,8 +58,11 @@ type AppData = {
   workouts: Workout[]
   workoutOfDay: Workout | null
   plans: Program[]
-  progress: ProgressSummary
+  progress: ProgressOverview
   me: UserProfile
+  favorites: string[]
+  /** true — каталог сейчас отфильтрован по подбору. */
+  catalogFiltered: boolean
 }
 
 const levelPillLabels: Record<WorkoutLevel, string> = {
@@ -77,17 +81,17 @@ function equipmentLabel(workout: Workout): string {
   return workout.equipment.length > 0 ? workout.equipment.join(', ') : 'без инвентаря'
 }
 
-const accessDateFormat = new Intl.DateTimeFormat('ru-RU', {
+const dayMonthFormat = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
   month: 'long',
 })
 
-function formatAccessDate(iso: string | null): string | null {
+function formatDayMonth(iso: string | null): string | null {
   if (!iso) {
     return null
   }
   const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? null : accessDateFormat.format(date)
+  return Number.isNaN(date.getTime()) ? null : dayMonthFormat.format(date)
 }
 
 function App() {
@@ -98,8 +102,12 @@ function App() {
   )
   const [toast, setToast] = useState('')
   const [data, setData] = useState<AppData | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [selectedWorkoutSlug, setSelectedWorkoutSlug] = useState<string | null>(null)
+  const [workoutDetail, setWorkoutDetail] = useState<Workout | null>(null)
 
+  // Единая машина состояний загрузки: loading → error | ready (retry через reloadKey).
   useEffect(() => {
     let cancelled = false
     Promise.all([
@@ -108,26 +116,42 @@ function App() {
       apiClient.getPlans(),
       apiClient.getProgress(),
       apiClient.getMe(),
+      apiClient.getFavorites(),
     ])
-      .then(([catalog, workoutOfDay, plans, progress, me]) => {
-        if (!cancelled) {
-          setData({
-            categories: catalog.categories,
-            workouts: catalog.workouts,
-            workoutOfDay,
-            plans,
-            progress,
-            me,
-          })
+      .then(([catalog, workoutOfDay, plans, progress, me, favorites]) => {
+        if (cancelled) {
+          return
+        }
+        setData({
+          categories: catalog.categories,
+          workouts: catalog.workouts,
+          workoutOfDay,
+          plans,
+          progress,
+          me,
+          favorites,
+          catalogFiltered: false,
+        })
+        // «Изменить подбор» и повторный онбординг начинаются с сохранённых ответов.
+        if (me.onboarding) {
+          setOnboardingAnswers(me.onboarding)
         }
       })
       .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
         console.error('[data] не удалось загрузить данные приложения', error)
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Что-то пошло не так при загрузке. Попробуйте ещё раз.',
+        )
       })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadKey])
 
   const currentStep = useMemo(
     () => steps.find((step) => step.id === screen)?.label ?? '',
@@ -142,10 +166,10 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  /** Открывает карточку тренировки: premium в прототипе ведёт на Locked. */
-  function openWorkout(workout: Workout) {
-    setSelectedWorkoutSlug(workout.slug)
-    go(workout.isPremium ? 'locked' : 'workout')
+  function retryLoad() {
+    setLoadError(null)
+    setData(null)
+    setReloadKey((key) => key + 1)
   }
 
   function showToast(message: string) {
@@ -153,11 +177,117 @@ function App() {
     window.setTimeout(() => setToast(''), 1300)
   }
 
+  /** Открывает карточку тренировки: закрытый контент ведёт на Locked. */
+  function openWorkout(workout: Workout) {
+    setSelectedWorkoutSlug(workout.slug)
+    const locked = workout.isLocked ?? workout.isPremium
+    go(locked ? 'locked' : 'workout')
+    if (!locked && workoutDetail?.slug !== workout.slug) {
+      // Полная карточка (в HTTP-режиме список каталога приходит без videoUrl).
+      apiClient
+        .getWorkout(workout.slug)
+        .then((detail) => {
+          if (detail) {
+            setWorkoutDetail(detail)
+          }
+        })
+        .catch(() => {
+          // Останемся на данных из списка — карточка всё равно читаема.
+        })
+    }
+  }
+
+  /** Завершение онбординга: сохранить подбор и отфильтровать каталог. */
+  function completeOnboarding(answers: OnboardingAnswers) {
+    go('catalog')
+    void (async () => {
+      try {
+        await apiClient.saveOnboarding(answers)
+        const catalog = await apiClient.getCatalog(onboardingToCatalogQuery(answers))
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                workouts: catalog.workouts,
+                catalogFiltered: true,
+                me: { ...current.me, onboarding: answers },
+              }
+            : current,
+        )
+      } catch {
+        showToast('Подбор не сохранился. Попробуйте ещё раз')
+      }
+    })()
+  }
+
+  /** Сброс фильтра подбора → полный каталог. */
+  function resetCatalogFilter() {
+    void apiClient
+      .getCatalog()
+      .then((catalog) => {
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                categories: catalog.categories,
+                workouts: catalog.workouts,
+                catalogFiltered: false,
+              }
+            : current,
+        )
+      })
+      .catch(() => {
+        showToast('Не получилось обновить каталог')
+      })
+  }
+
+  /** «Я сделала»: markDone → свежие метрики (+ история) → мягкий toast. */
+  function markWorkoutDone(workoutSlug: string) {
+    void (async () => {
+      try {
+        const summary = await apiClient.markDone(workoutSlug)
+        let progress: ProgressOverview = {
+          summary,
+          entries: data?.progress.entries ?? [],
+        }
+        try {
+          progress = await apiClient.getProgress()
+        } catch {
+          // Метрики уже свежие; история догрузится при следующем обновлении.
+        }
+        setData((current) => (current ? { ...current, progress } : current))
+        showToast('Записано. Даже 10 минут считаются')
+      } catch {
+        showToast('Не получилось сохранить. Попробуйте ещё раз')
+      }
+    })()
+  }
+
+  function toggleFavorite(workoutSlug: string) {
+    void apiClient
+      .toggleFavorite(workoutSlug)
+      .then((result) => {
+        setData((current) => (current ? { ...current, favorites: result.slugs } : current))
+        showToast(result.favorited ? 'Добавлено в избранное' : 'Убрано из избранного')
+      })
+      .catch(() => {
+        showToast('Не получилось обновить избранное')
+      })
+  }
+
+  function editOnboarding() {
+    if (data?.me.onboarding) {
+      setOnboardingAnswers(data.me.onboarding)
+    }
+    go('onboarding')
+  }
+
   // Фолбэки нужны, чтобы экраны «Тренировка» и «Locked» открывались
   // и напрямую из левой панели прототипа, без выбора карточки.
   const selectedWorkout =
     data?.workouts.find((workout) => workout.slug === selectedWorkoutSlug) ?? null
   const workoutForDetail =
+    (workoutDetail && workoutDetail.slug === selectedWorkoutSlug ? workoutDetail : null) ??
     (selectedWorkout && !selectedWorkout.isPremium ? selectedWorkout : null) ??
     data?.workouts.find((workout) => !workout.isPremium) ??
     null
@@ -194,6 +324,8 @@ function App() {
       <section className="phone" aria-label="Refiesse Fit Mini App prototype">
         <div className="app-shell">
           <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
+          {!data && !loadError && <LoadingScreen />}
+          {!data && loadError && <ErrorScreen message={loadError} onRetry={retryLoad} />}
           {data && (
             <>
               {screen === 'home' && <HomeScreen data={data} go={go} openWorkout={openWorkout} />}
@@ -201,16 +333,29 @@ function App() {
                 <OnboardingScreen
                   answers={onboardingAnswers}
                   go={go}
+                  onComplete={completeOnboarding}
                   stepIndex={onboardingStep}
                   setAnswers={setOnboardingAnswers}
                   setStepIndex={setOnboardingStep}
                 />
               )}
               {screen === 'catalog' && (
-                <CatalogScreen data={data} go={go} openWorkout={openWorkout} />
+                <CatalogScreen
+                  data={data}
+                  go={go}
+                  onResetFilter={resetCatalogFilter}
+                  openWorkout={openWorkout}
+                />
               )}
               {screen === 'workout' && workoutForDetail && (
-                <WorkoutScreen go={go} showToast={showToast} workout={workoutForDetail} />
+                <WorkoutScreen
+                  go={go}
+                  isFavorite={data.favorites.includes(workoutForDetail.slug)}
+                  onDone={markWorkoutDone}
+                  onToggleFavorite={toggleFavorite}
+                  showToast={showToast}
+                  workout={workoutForDetail}
+                />
               )}
               {screen === 'plans' && (
                 <PlansScreen data={data} go={go} openWorkout={openWorkout} />
@@ -221,15 +366,62 @@ function App() {
               {screen === 'paywall' && <PaywallScreen go={go} />}
               {screen === 'success' && <SuccessScreen data={data} go={go} />}
               {screen === 'progress' && (
-                <ProgressScreen progress={data.progress} showToast={showToast} />
+                <ProgressScreen
+                  onDone={() => {
+                    const slug = data.workoutOfDay?.slug
+                    if (slug) {
+                      markWorkoutDone(slug)
+                    } else {
+                      showToast('Выберите тренировку в каталоге')
+                    }
+                  }}
+                  progress={data.progress}
+                />
               )}
-              {screen === 'profile' && <ProfileScreen go={go} me={data.me} />}
+              {screen === 'profile' && (
+                <ProfileScreen go={go} me={data.me} onEditOnboarding={editOnboarding} />
+              )}
               <BottomNav current={screen} go={go} />
             </>
           )}
         </div>
       </section>
     </main>
+  )
+}
+
+/** Скелетон в форме Home (ui-tokens 9.1): без текста и спиннеров. */
+function LoadingScreen() {
+  return (
+    <section className="screen" aria-busy="true">
+      <span className="visually-hidden">Загружаем…</span>
+      <div className="skeleton sk-hero" />
+      <div className="sk-chips">
+        <span className="skeleton sk-chip" />
+        <span className="skeleton sk-chip" />
+        <span className="skeleton sk-chip" />
+        <span className="skeleton sk-chip" />
+      </div>
+      <div className="skeleton sk-card" />
+      <div className="skeleton sk-program" />
+    </section>
+  )
+}
+
+/** Ошибка загрузки: мягкий текст + повтор (Soft System, без тревоги). */
+function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <section className="screen">
+      <TopBar />
+      <div className="hero">
+        <div className="badge">небольшая пауза</div>
+        <h2>Данные не загрузились</h2>
+        <p>{message}</p>
+      </div>
+      <button className="cta full" onClick={onRetry} type="button">
+        Попробовать ещё раз
+      </button>
+    </section>
   )
 }
 
@@ -282,10 +474,10 @@ function HomeScreen({
   go: (screen: Screen) => void
   openWorkout: (workout: Workout) => void
 }) {
-  const accessUntil = formatAccessDate(data.me.access.expiresAt)
+  const accessUntil = formatDayMonth(data.me.access.expiresAt)
   const workoutOfDay = data.workoutOfDay
   const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
-  const { done, total } = data.progress.planProgress
+  const { done, total } = data.progress.summary.planProgress
   const todayDay = plan?.days[done] ?? null
 
   return (
@@ -372,12 +564,14 @@ function answerLabel(step: OnboardingStepDef, answers: OnboardingAnswers): strin
 function OnboardingScreen({
   answers,
   go,
+  onComplete,
   stepIndex,
   setAnswers,
   setStepIndex,
 }: {
   answers: OnboardingAnswers
   go: (screen: Screen) => void
+  onComplete: (answers: OnboardingAnswers) => void
   stepIndex: number
   setAnswers: Dispatch<SetStateAction<OnboardingAnswers>>
   setStepIndex: Dispatch<SetStateAction<number>>
@@ -406,7 +600,7 @@ function OnboardingScreen({
 
   function next() {
     if (isLastStep) {
-      go('catalog')
+      onComplete(answers)
       return
     }
     setStepIndex((current) => Math.min(current + 1, onboardingSteps.length - 1))
@@ -467,13 +661,20 @@ function OnboardingScreen({
   )
 }
 
+const emptyFilteredCatalogText =
+  'Под этот подбор пока нет тренировок. Попробуйте убрать один фильтр или изменить состояние — мягких вариантов много.'
+const emptyCatalogText =
+  'Тренировки скоро появятся здесь. Загляните чуть позже — мы наполняем каталог мягкими практиками.'
+
 function CatalogScreen({
   data,
   go,
+  onResetFilter,
   openWorkout,
 }: {
   data: AppData
   go: (screen: Screen) => void
+  onResetFilter: () => void
   openWorkout: (workout: Workout) => void
 }) {
   return (
@@ -499,33 +700,74 @@ function CatalogScreen({
           </button>
         ))}
       </div>
-      {data.workouts.map((workout) => (
-        <WorkoutCard
-          isPremium={workout.isPremium}
-          key={workout.slug}
-          meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
-          onClick={() => openWorkout(workout)}
-          title={workout.title}
-          thumb={workout.thumbColor}
-        />
-      ))}
+      {data.catalogFiltered && (
+        <div className="filter-note">
+          <span>Показан подбор под ваше состояние</span>
+          <button onClick={onResetFilter} type="button">
+            Сбросить
+          </button>
+        </div>
+      )}
+      {data.workouts.length === 0 ? (
+        <div className="empty-state">
+          <h3>Пока пусто</h3>
+          <p>{data.catalogFiltered ? emptyFilteredCatalogText : emptyCatalogText}</p>
+          {data.catalogFiltered && (
+            <button className="cta secondary full" onClick={onResetFilter} type="button">
+              Показать все тренировки
+            </button>
+          )}
+        </div>
+      ) : (
+        data.workouts.map((workout) => (
+          <WorkoutCard
+            isPremium={workout.isPremium}
+            key={workout.slug}
+            meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
+            onClick={() => openWorkout(workout)}
+            title={workout.title}
+            thumb={workout.thumbColor}
+          />
+        ))
+      )}
     </section>
   )
 }
 
 function WorkoutScreen({
   go,
+  isFavorite,
+  onDone,
+  onToggleFavorite,
   showToast,
   workout,
 }: {
   go: (screen: Screen) => void
+  isFavorite: boolean
+  onDone: (workoutSlug: string) => void
+  onToggleFavorite: (workoutSlug: string) => void
   showToast: (message: string) => void
   workout: Workout
 }) {
   return (
     <section className="screen">
-      <TopBar onBack={() => go('catalog')} right="♡" onProfile={() => showToast('Добавлено в избранное')} />
-      <div className="video" />
+      <TopBar
+        onBack={() => go('catalog')}
+        right={isFavorite ? '♥' : '♡'}
+        onProfile={() => onToggleFavorite(workout.slug)}
+      />
+      {workout.videoUrl ? (
+        <a
+          className="video video-playable"
+          href={workout.videoUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <span className="video-cta">Смотреть видео</span>
+        </a>
+      ) : (
+        <div className="video" />
+      )}
       <h2 className="compact-title">{workout.title}</h2>
       <p className="lead">{workout.description}</p>
       <div className="facts">
@@ -536,10 +778,27 @@ function WorkoutScreen({
       <div className="note">
         <b>Осторожно:</b> {workout.cautions}
       </div>
-      <button className="cta full" onClick={() => showToast('Тренировка началась')} type="button">
+      <button
+        className="cta full"
+        onClick={() => {
+          if (workout.videoUrl) {
+            window.open(workout.videoUrl, '_blank', 'noopener')
+          } else {
+            showToast('Тренировка началась')
+          }
+        }}
+        type="button"
+      >
         Начать тренировку
       </button>
-      <button className="cta ghost full stacked" onClick={() => go('progress')} type="button">
+      <button
+        className="cta ghost full stacked"
+        onClick={() => {
+          onDone(workout.slug)
+          go('progress')
+        }}
+        type="button"
+      >
         Я сделала
       </button>
     </section>
@@ -557,7 +816,7 @@ function PlansScreen({
 }) {
   const freePlan = data.plans.find((program) => !program.isPremium) ?? null
   const premiumPlans = data.plans.filter((program) => program.isPremium)
-  const { done, total } = data.progress.planProgress
+  const { done, total } = data.progress.summary.planProgress
   const todayDay = freePlan?.days[done] ?? null
   const todayWorkout = todayDay?.workoutSlug
     ? data.workouts.find((workout) => workout.slug === todayDay.workoutSlug) ?? null
@@ -651,7 +910,7 @@ function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
 
 function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => void }) {
   const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
-  const { done, total } = data.progress.planProgress
+  const { done, total } = data.progress.summary.planProgress
   const todayDay = plan?.days[done] ?? null
 
   return (
@@ -682,12 +941,15 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
 }
 
 function ProgressScreen({
+  onDone,
   progress,
-  showToast,
 }: {
-  progress: ProgressSummary
-  showToast: (message: string) => void
+  onDone: () => void
+  progress: ProgressOverview
 }) {
+  const { summary, entries } = progress
+  const recent = entries.slice(0, 5)
+
   return (
     <section className="screen">
       <TopBar title="Прогресс" right="↗" />
@@ -697,20 +959,46 @@ function ProgressScreen({
         <p>Прогресс поддерживает регулярность, но не наказывает за пропуски.</p>
       </div>
       <div className="stats">
-        <Stat value={String(progress.workouts)} label="тренировки" />
-        <Stat value={String(progress.minutes)} label="минуты" />
-        <Stat value={String(progress.streakDays)} label="дня подряд" />
-        <Stat value={`${progress.planProgress.done}/${progress.planProgress.total}`} label="план" />
+        <Stat value={String(summary.workouts)} label="тренировки" />
+        <Stat value={String(summary.minutes)} label="минуты" />
+        <Stat value={String(summary.streakDays)} label="дня подряд" />
+        <Stat value={`${summary.planProgress.done}/${summary.planProgress.total}`} label="план" />
       </div>
-      <button className="cta lime full" onClick={() => showToast('Уже отмечено')} type="button">
+      <button className="cta lime full" onClick={onDone} type="button">
         Я сделала тренировку
       </button>
+      {recent.length > 0 && (
+        <>
+          <div className="section-title">
+            <h3>Недавние практики</h3>
+            <small>история</small>
+          </div>
+          <div className="history">
+            {recent.map((entry) => (
+              <div className="history-item" key={`${entry.workoutSlug}-${entry.completedAt}`}>
+                <strong>{entry.workoutTitle}</strong>
+                <span>
+                  {formatDayMonth(entry.completedAt) ?? '—'} · {entry.durationMin} мин
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   )
 }
 
-function ProfileScreen({ go, me }: { go: (screen: Screen) => void; me: UserProfile }) {
-  const accessUntil = formatAccessDate(me.access.expiresAt)
+function ProfileScreen({
+  go,
+  me,
+  onEditOnboarding,
+}: {
+  go: (screen: Screen) => void
+  me: UserProfile
+  onEditOnboarding: () => void
+}) {
+  const accessUntil = formatDayMonth(me.access.expiresAt)
 
   return (
     <section className="screen">
@@ -735,7 +1023,7 @@ function ProfileScreen({ go, me }: { go: (screen: Screen) => void; me: UserProfi
           Управлять подпиской
         </button>
       </div>
-      <button className="cta secondary full" onClick={() => go('onboarding')} type="button">
+      <button className="cta secondary full" onClick={onEditOnboarding} type="button">
         Изменить подбор
       </button>
     </section>
