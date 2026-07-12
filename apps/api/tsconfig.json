@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    /* Сгенерированный Prisma-клиент импортирует файлы с расширением .ts. */
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "test", "prisma.config.ts", "vitest.config.ts"]
+}
