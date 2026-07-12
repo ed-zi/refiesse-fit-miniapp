@@ -6,7 +6,9 @@ import { loadConfig, type AppConfig } from './config.ts';
 import { createPrismaConnection } from './db/prisma.ts';
 import { AppError } from './errors.ts';
 import { registerAuthRoutes } from './routes/auth.ts';
+import { registerCatalogRoutes } from './routes/catalog.ts';
 import { registerMeRoutes } from './routes/me.ts';
+import { registerPlanRoutes } from './routes/plans.ts';
 import type { PrismaClient } from './generated/prisma/client.ts';
 
 declare module 'fastify' {
@@ -106,6 +108,8 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
 
   registerAuthRoutes(app);
   registerMeRoutes(app);
+  registerCatalogRoutes(app);
+  registerPlanRoutes(app);
 
   return app;
 }

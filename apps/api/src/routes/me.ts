@@ -1,15 +1,7 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
+import { authenticate } from '../auth.ts';
 import { AppError } from '../errors.ts';
 import { serializeUser, type MeResponse } from '../types.ts';
-
-/** preHandler: проверяет Bearer JWT; без/с битым токеном → 401. */
-async function authenticate(request: FastifyRequest): Promise<void> {
-  try {
-    await request.jwtVerify();
-  } catch {
-    throw new AppError(401, 'UNAUTHORIZED', 'Missing or invalid access token');
-  }
-}
 
 export function registerMeRoutes(app: FastifyInstance): void {
   /**

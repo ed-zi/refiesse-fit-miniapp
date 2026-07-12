@@ -5,10 +5,11 @@ import { TEST_DATABASE_URL } from './testDb.ts';
 const apiRoot = fileURLToPath(new URL('..', import.meta.url));
 
 /**
- * Перед тестами: создаём refiesse_test (если её нет) и накатываем миграции.
- * Делает прогон повторяемым на чистой машине с локальным PostgreSQL.
+ * Перед тестами: создаём refiesse_test (если её нет), накатываем миграции,
+ * генерируем клиент и сидим контент (идемпотентно). Делает прогон
+ * повторяемым на чистой машине с локальным PostgreSQL.
  */
-export default function globalSetup(): void {
+export default async function globalSetup(): Promise<void> {
   const url = new URL(TEST_DATABASE_URL);
   const dbName = url.pathname.replace(/^\//, '');
 
@@ -40,4 +41,16 @@ export default function globalSetup(): void {
     env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
     stdio: 'pipe',
   });
+
+  // Seed контента (динамический import — сгенерированный клиент появился строкой выше).
+  const [{ seedDatabase }, { createPrismaConnection }] = await Promise.all([
+    import('../prisma/seed.ts'),
+    import('../src/db/prisma.ts'),
+  ]);
+  const connection = await createPrismaConnection(TEST_DATABASE_URL);
+  try {
+    await seedDatabase(connection.prisma);
+  } finally {
+    await connection.close();
+  }
 }
