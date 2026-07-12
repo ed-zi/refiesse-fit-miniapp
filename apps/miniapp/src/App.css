@@ -486,6 +486,15 @@ p,
   background: var(--purple);
 }
 
+/* Мультивыбор (шаг «инвентарь»): квадратный чекбокс вместо радио. */
+.radio.checkbox {
+  border-radius: 8px;
+}
+
+.option.active .radio.checkbox::after {
+  border-radius: 4px;
+}
+
 .filter-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -724,7 +733,9 @@ p,
   position: absolute;
   left: 14px;
   right: 14px;
-  bottom: 14px;
+  /* Внутри Telegram SDK биндит --tg-viewport-safe-area-inset-bottom;
+     в обычном браузере срабатывает fallback 0px. */
+  bottom: calc(14px + var(--tg-viewport-safe-area-inset-bottom, 0px));
   min-height: 74px;
   border: 1px solid rgba(236, 232, 247, 0.92);
   border-radius: 30px;

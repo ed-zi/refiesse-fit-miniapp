@@ -1,4 +1,29 @@
-import { type Dispatch, type ReactNode, type SetStateAction, useMemo, useState } from 'react'
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+import type {
+  Category,
+  OnboardingAnswers,
+  Program,
+  ProgressSummary,
+  UserProfile,
+  Workout,
+  WorkoutLevel,
+} from '@refiesse-fit/shared'
+import { apiClient } from './api/client'
+import {
+  NO_EQUIPMENT,
+  type OnboardingStepDef,
+  catalogFilters,
+  defaultOnboardingAnswers,
+  onboardingSteps,
+  paywallFeatures,
+} from './data/mock'
 import './App.css'
 
 type Screen =
@@ -26,104 +51,44 @@ const steps: Array<{ id: Screen; label: string }> = [
   { id: 'profile', label: 'Профиль: подписка и настройки' },
 ]
 
-const categories = ['Спина', 'Осанка', 'Кор', 'Расслабление']
-
-type OnboardingAnswers = {
-  goal: string
-  time: string
-  equipment: string
-  intensity: string
+/** Все данные экранов, полученные через слой данных (mock или HTTP). */
+type AppData = {
+  categories: Category[]
+  workouts: Workout[]
+  workoutOfDay: Workout | null
+  plans: Program[]
+  progress: ProgressSummary
+  me: UserProfile
 }
 
-type OnboardingKey = keyof OnboardingAnswers
-
-type OnboardingStep = {
-  key: OnboardingKey
-  badge: string
-  title: string
-  description: string
-  options: Array<[string, string]>
+const levelPillLabels: Record<WorkoutLevel, string> = {
+  beginner: 'новичок',
+  medium: 'средний',
+  advanced: 'опытный',
 }
 
-const onboardingSteps: OnboardingStep[] = [
-  {
-    key: 'goal',
-    badge: 'быстрый подбор',
-    title: 'Что сейчас нужно телу?',
-    description: 'Выберите основное состояние. Это не диагноз, а мягкий ориентир.',
-    options: [
-      ['Шея и плечи зажаты', 'после работы, сидения, дороги'],
-      ['Поясница устала', 'хочется разгрузить мягко'],
-      ['Кор и живот', 'без агрессивных скручиваний'],
-      ['Расслабиться перед сном', 'спокойная вечерняя практика'],
-    ],
-  },
-  {
-    key: 'time',
-    badge: 'время',
-    title: 'Сколько есть времени?',
-    description: 'Подберём практику так, чтобы её реально было сделать сегодня.',
-    options: [
-      ['5–10 минут', 'очень короткая разгрузка'],
-      ['15–20 минут', 'оптимально для домашней практики'],
-      ['25–35 минут', 'если хочется пройти полноценнее'],
-    ],
-  },
-  {
-    key: 'equipment',
-    badge: 'инвентарь',
-    title: 'Что есть под рукой?',
-    description: 'Если ничего нет — это нормально, большинство практик можно делать без инвентаря.',
-    options: [
-      ['Без инвентаря', 'достаточно места и коврика по желанию'],
-      ['Коврик', 'удобнее для пола и растяжки'],
-      ['Резинка', 'можно добавить мягкое сопротивление'],
-      ['МФР-ролл', 'для восстановления и расслабления'],
-    ],
-  },
-  {
-    key: 'intensity',
-    badge: 'режим',
-    title: 'Какой режим комфортен?',
-    description: 'Выберите нагрузку без идеи “потерпеть”. Подбор должен остаться мягким.',
-    options: [
-      ['Очень мягко', 'без перегруза и сложных связок'],
-      ['Обычный домашний темп', 'спокойно, но с ощущением работы'],
-      ['Хочу чуть активнее', 'если есть силы и желание подвигаться больше'],
-    ],
-  },
-]
-
-const defaultOnboardingAnswers: OnboardingAnswers = {
-  goal: onboardingSteps[0].options[0][0],
-  time: onboardingSteps[1].options[1][0],
-  equipment: onboardingSteps[2].options[0][0],
-  intensity: onboardingSteps[3].options[0][0],
+const levelFactLabels: Record<WorkoutLevel, string> = {
+  beginner: 'easy',
+  medium: 'medium',
+  advanced: 'hard',
 }
 
-const workouts = [
-  {
-    title: 'Кор без скручиваний',
-    access: 'premium',
-    meta: ['18 мин', 'новичок'],
-    thumb: 'peach',
-    target: 'locked' as Screen,
-  },
-  {
-    title: 'Поясница после сидячего дня',
-    access: 'premium',
-    meta: ['15 мин'],
-    thumb: '',
-    target: 'locked' as Screen,
-  },
-  {
-    title: 'Вечернее расслабление',
-    access: 'free',
-    meta: ['9 мин'],
-    thumb: 'dark',
-    target: 'workout' as Screen,
-  },
-]
+function equipmentLabel(workout: Workout): string {
+  return workout.equipment.length > 0 ? workout.equipment.join(', ') : 'без инвентаря'
+}
+
+const accessDateFormat = new Intl.DateTimeFormat('ru-RU', {
+  day: 'numeric',
+  month: 'long',
+})
+
+function formatAccessDate(iso: string | null): string | null {
+  if (!iso) {
+    return null
+  }
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? null : accessDateFormat.format(date)
+}
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home')
@@ -132,6 +97,37 @@ function App() {
     defaultOnboardingAnswers,
   )
   const [toast, setToast] = useState('')
+  const [data, setData] = useState<AppData | null>(null)
+  const [selectedWorkoutSlug, setSelectedWorkoutSlug] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      apiClient.getCatalog(),
+      apiClient.getWorkoutOfDay(),
+      apiClient.getPlans(),
+      apiClient.getProgress(),
+      apiClient.getMe(),
+    ])
+      .then(([catalog, workoutOfDay, plans, progress, me]) => {
+        if (!cancelled) {
+          setData({
+            categories: catalog.categories,
+            workouts: catalog.workouts,
+            workoutOfDay,
+            plans,
+            progress,
+            me,
+          })
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('[data] не удалось загрузить данные приложения', error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const currentStep = useMemo(
     () => steps.find((step) => step.id === screen)?.label ?? '',
@@ -146,10 +142,29 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  /** Открывает карточку тренировки: premium в прототипе ведёт на Locked. */
+  function openWorkout(workout: Workout) {
+    setSelectedWorkoutSlug(workout.slug)
+    go(workout.isPremium ? 'locked' : 'workout')
+  }
+
   function showToast(message: string) {
     setToast(message)
     window.setTimeout(() => setToast(''), 1300)
   }
+
+  // Фолбэки нужны, чтобы экраны «Тренировка» и «Locked» открывались
+  // и напрямую из левой панели прототипа, без выбора карточки.
+  const selectedWorkout =
+    data?.workouts.find((workout) => workout.slug === selectedWorkoutSlug) ?? null
+  const workoutForDetail =
+    (selectedWorkout && !selectedWorkout.isPremium ? selectedWorkout : null) ??
+    data?.workouts.find((workout) => !workout.isPremium) ??
+    null
+  const workoutForLocked =
+    (selectedWorkout?.isPremium ? selectedWorkout : null) ??
+    data?.workouts.find((workout) => workout.isPremium) ??
+    null
 
   return (
     <main className="board">
@@ -179,25 +194,39 @@ function App() {
       <section className="phone" aria-label="Refiesse Fit Mini App prototype">
         <div className="app-shell">
           <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
-          {screen === 'home' && <HomeScreen go={go} />}
-          {screen === 'onboarding' && (
-            <OnboardingScreen
-              answers={onboardingAnswers}
-              go={go}
-              stepIndex={onboardingStep}
-              setAnswers={setOnboardingAnswers}
-              setStepIndex={setOnboardingStep}
-            />
+          {data && (
+            <>
+              {screen === 'home' && <HomeScreen data={data} go={go} openWorkout={openWorkout} />}
+              {screen === 'onboarding' && (
+                <OnboardingScreen
+                  answers={onboardingAnswers}
+                  go={go}
+                  stepIndex={onboardingStep}
+                  setAnswers={setOnboardingAnswers}
+                  setStepIndex={setOnboardingStep}
+                />
+              )}
+              {screen === 'catalog' && (
+                <CatalogScreen data={data} go={go} openWorkout={openWorkout} />
+              )}
+              {screen === 'workout' && workoutForDetail && (
+                <WorkoutScreen go={go} showToast={showToast} workout={workoutForDetail} />
+              )}
+              {screen === 'plans' && (
+                <PlansScreen data={data} go={go} openWorkout={openWorkout} />
+              )}
+              {screen === 'locked' && workoutForLocked && (
+                <LockedScreen go={go} workout={workoutForLocked} />
+              )}
+              {screen === 'paywall' && <PaywallScreen go={go} />}
+              {screen === 'success' && <SuccessScreen data={data} go={go} />}
+              {screen === 'progress' && (
+                <ProgressScreen progress={data.progress} showToast={showToast} />
+              )}
+              {screen === 'profile' && <ProfileScreen go={go} me={data.me} />}
+              <BottomNav current={screen} go={go} />
+            </>
           )}
-          {screen === 'catalog' && <CatalogScreen go={go} />}
-          {screen === 'workout' && <WorkoutScreen go={go} showToast={showToast} />}
-          {screen === 'plans' && <PlansScreen go={go} />}
-          {screen === 'locked' && <LockedScreen go={go} />}
-          {screen === 'paywall' && <PaywallScreen go={go} />}
-          {screen === 'success' && <SuccessScreen go={go} />}
-          {screen === 'progress' && <ProgressScreen showToast={showToast} />}
-          {screen === 'profile' && <ProfileScreen go={go} />}
-          <BottomNav current={screen} go={go} />
         </div>
       </section>
     </main>
@@ -244,12 +273,30 @@ function TopBar({
   )
 }
 
-function HomeScreen({ go }: { go: (screen: Screen) => void }) {
+function HomeScreen({
+  data,
+  go,
+  openWorkout,
+}: {
+  data: AppData
+  go: (screen: Screen) => void
+  openWorkout: (workout: Workout) => void
+}) {
+  const accessUntil = formatAccessDate(data.me.access.expiresAt)
+  const workoutOfDay = data.workoutOfDay
+  const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
+  const { done, total } = data.progress.planProgress
+  const todayDay = plan?.days[done] ?? null
+
   return (
     <section className="screen">
       <TopBar onProfile={() => go('profile')} />
       <div className="hero hero-tall">
-        <div className="badge">Доступ открыт до 18 июля</div>
+        <div className="badge">
+          {data.me.access.isPremium && accessUntil
+            ? `Доступ открыт до ${accessUntil}`
+            : 'Бесплатный доступ'}
+        </div>
         <h2>Что нужно телу сегодня?</h2>
         <p>
           Выберите состояние — я подберу мягкую тренировку на 10–20 минут.
@@ -259,35 +306,67 @@ function HomeScreen({ go }: { go: (screen: Screen) => void }) {
         Подобрать тренировку
       </button>
       <div className="chips" aria-label="Категории">
-        {categories.map((category, index) => (
+        {data.categories.map((category, index) => (
           <button
             className={`chip ${index === 0 ? 'active' : ''}`}
-            key={category}
+            key={category.slug}
             onClick={() => go('catalog')}
             type="button"
           >
-            {category}
+            {category.title}
           </button>
         ))}
       </div>
-      <div className="section-title">
-        <h3>Тренировка дня</h3>
-        <small>12 мин</small>
-      </div>
-      <WorkoutCard
-        access="free"
-        meta={['без инвентаря']}
-        onClick={() => go('workout')}
-        title="Мягкая разгрузка шеи и плеч"
-        thumb="dark"
-      />
-      <div className="section-title">
-        <h3>Текущий план</h3>
-        <small>3/7</small>
-      </div>
-      <ProgramCard onClick={() => go('plans')} />
+      {workoutOfDay && (
+        <>
+          <div className="section-title">
+            <h3>Тренировка дня</h3>
+            <small>{workoutOfDay.durationMin} мин</small>
+          </div>
+          <WorkoutCard
+            isPremium={workoutOfDay.isPremium}
+            meta={[equipmentLabel(workoutOfDay)]}
+            onClick={() => openWorkout(workoutOfDay)}
+            title={workoutOfDay.title}
+            thumb={workoutOfDay.thumbColor}
+          />
+        </>
+      )}
+      {plan && (
+        <>
+          <div className="section-title">
+            <h3>Текущий план</h3>
+            <small>
+              {done}/{total}
+            </small>
+          </div>
+          <ProgramCard
+            note={todayDay ? `Сегодня: ${todayDay.title}` : null}
+            onClick={() => go('plans')}
+            percent={total > 0 ? Math.round((done / total) * 100) : 0}
+            title={plan.title}
+          />
+        </>
+      )}
     </section>
   )
+}
+
+function isOptionSelected(
+  step: OnboardingStepDef,
+  answers: OnboardingAnswers,
+  value: string,
+): boolean {
+  const current = answers[step.key]
+  return Array.isArray(current) ? current.includes(value) : current === value
+}
+
+function answerLabel(step: OnboardingStepDef, answers: OnboardingAnswers): string {
+  const current = answers[step.key]
+  if (Array.isArray(current)) {
+    return current.length > 0 ? current.join(', ') : NO_EQUIPMENT
+  }
+  return current
 }
 
 function OnboardingScreen({
@@ -304,11 +383,25 @@ function OnboardingScreen({
   setStepIndex: Dispatch<SetStateAction<number>>
 }) {
   const step = onboardingSteps[stepIndex]
-  const selectedValue = answers[step.key]
   const isLastStep = stepIndex === onboardingSteps.length - 1
 
   function choose(value: string) {
-    setAnswers((current) => ({ ...current, [step.key]: value }))
+    setAnswers((current) => {
+      if (step.key === 'equipment') {
+        // Мультивыбор: toggle; «Без инвентаря» — эксклюзивная опция.
+        const selected = current.equipment
+        let next: string[]
+        if (step.exclusiveValue && value === step.exclusiveValue) {
+          next = selected.includes(value) ? [] : [value]
+        } else if (selected.includes(value)) {
+          next = selected.filter((item) => item !== value)
+        } else {
+          next = [...selected.filter((item) => item !== step.exclusiveValue), value]
+        }
+        return { ...current, equipment: next }
+      }
+      return { ...current, [step.key]: value }
+    })
   }
 
   function next() {
@@ -329,8 +422,11 @@ function OnboardingScreen({
 
   return (
     <section className="screen">
-      <TopBar onBack={back} right={`Шаг ${stepIndex + 1}/4`} />
-      <div className="onboarding-progress" aria-label={`Шаг ${stepIndex + 1} из 4`}>
+      <TopBar onBack={back} right={`Шаг ${stepIndex + 1}/${onboardingSteps.length}`} />
+      <div
+        className="onboarding-progress"
+        aria-label={`Шаг ${stepIndex + 1} из ${onboardingSteps.length}`}
+      >
         {onboardingSteps.map((item, index) => (
           <span
             className={index <= stepIndex ? 'active' : ''}
@@ -344,24 +440,24 @@ function OnboardingScreen({
         <h2>{step.title}</h2>
         <p>{step.description}</p>
       </div>
-      {step.options.map(([title, description]) => (
+      {step.options.map((option) => (
         <button
-          className={`option ${selectedValue === title ? 'active' : ''}`}
-          key={title}
-          onClick={() => choose(title)}
+          className={`option ${isOptionSelected(step, answers, option.value) ? 'active' : ''}`}
+          key={option.value}
+          onClick={() => choose(option.value)}
           type="button"
         >
-          <span className="radio" />
+          <span className={`radio ${step.multi ? 'checkbox' : ''}`} />
           <span>
-            <strong>{title}</strong>
-            <small>{description}</small>
+            <strong>{option.value}</strong>
+            <small>{option.hint}</small>
           </span>
         </button>
       ))}
       <div className="selection-summary">
         <strong>Подбор</strong>
         {onboardingSteps.slice(0, stepIndex + 1).map((item) => (
-          <span key={item.key}>{answers[item.key]}</span>
+          <span key={item.key}>{answerLabel(item, answers)}</span>
         ))}
       </div>
       <button className="cta full" onClick={next} type="button">
@@ -371,7 +467,15 @@ function OnboardingScreen({
   )
 }
 
-function CatalogScreen({ go }: { go: (screen: Screen) => void }) {
+function CatalogScreen({
+  data,
+  go,
+  openWorkout,
+}: {
+  data: AppData
+  go: (screen: Screen) => void
+  openWorkout: (workout: Workout) => void
+}) {
   return (
     <section className="screen">
       <TopBar title="Каталог" right="⌕" onProfile={() => go('profile')} />
@@ -389,20 +493,20 @@ function CatalogScreen({ go }: { go: (screen: Screen) => void }) {
         </button>
       </div>
       <div className="chips">
-        {['Все', '5–10 мин', 'Premium', 'Новичкам'].map((chip, index) => (
+        {catalogFilters.map((chip, index) => (
           <button className={`chip ${index === 0 ? 'active' : ''}`} key={chip} type="button">
             {chip}
           </button>
         ))}
       </div>
-      {workouts.map((workout) => (
+      {data.workouts.map((workout) => (
         <WorkoutCard
-          access={workout.access}
-          key={workout.title}
-          meta={workout.meta}
-          onClick={() => go(workout.target)}
+          isPremium={workout.isPremium}
+          key={workout.slug}
+          meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
+          onClick={() => openWorkout(workout)}
           title={workout.title}
-          thumb={workout.thumb}
+          thumb={workout.thumbColor}
         />
       ))}
     </section>
@@ -412,27 +516,25 @@ function CatalogScreen({ go }: { go: (screen: Screen) => void }) {
 function WorkoutScreen({
   go,
   showToast,
+  workout,
 }: {
   go: (screen: Screen) => void
   showToast: (message: string) => void
+  workout: Workout
 }) {
   return (
     <section className="screen">
       <TopBar onBack={() => go('catalog')} right="♡" onProfile={() => showToast('Добавлено в избранное')} />
       <div className="video" />
-      <h2 className="compact-title">Мягкая мобилизация грудного отдела</h2>
-      <p className="lead">
-        Для тех, кто долго сидел и чувствует зажатость в шее, плечах и верхе
-        спины.
-      </p>
+      <h2 className="compact-title">{workout.title}</h2>
+      <p className="lead">{workout.description}</p>
       <div className="facts">
-        <Fact value="14" label="мин" />
-        <Fact value="0" label="инвентарь" />
-        <Fact value="easy" label="уровень" />
+        <Fact value={String(workout.durationMin)} label="мин" />
+        <Fact value={String(workout.equipment.length)} label="инвентарь" />
+        <Fact value={levelFactLabels[workout.level]} label="уровень" />
       </div>
       <div className="note">
-        <b>Осторожно:</b> если есть острая боль, онемение или недавняя травма —
-        не идём через усилие.
+        <b>Осторожно:</b> {workout.cautions}
       </div>
       <button className="cta full" onClick={() => showToast('Тренировка началась')} type="button">
         Начать тренировку
@@ -444,35 +546,61 @@ function WorkoutScreen({
   )
 }
 
-function PlansScreen({ go }: { go: (screen: Screen) => void }) {
+function PlansScreen({
+  data,
+  go,
+  openWorkout,
+}: {
+  data: AppData
+  go: (screen: Screen) => void
+  openWorkout: (workout: Workout) => void
+}) {
+  const freePlan = data.plans.find((program) => !program.isPremium) ?? null
+  const premiumPlans = data.plans.filter((program) => program.isPremium)
+  const { done, total } = data.progress.planProgress
+  const todayDay = freePlan?.days[done] ?? null
+  const todayWorkout = todayDay?.workoutSlug
+    ? data.workouts.find((workout) => workout.slug === todayDay.workoutSlug) ?? null
+    : null
+
   return (
     <section className="screen">
       <TopBar title="Планы" right="◇" />
       <h2>Идти по системе</h2>
       <p className="lead">Планы на 5–7 дней помогают не искать случайные упражнения.</p>
-      <ProgramCard onClick={() => go('workout')} />
-      <WorkoutCard
-        access="premium"
-        meta={['5 дней']}
-        onClick={() => go('paywall')}
-        title="Кор без скручиваний"
-        thumb="peach"
-      />
+      {freePlan && (
+        <ProgramCard
+          note={todayDay ? `Сегодня: ${todayDay.title}` : null}
+          onClick={() => (todayWorkout ? openWorkout(todayWorkout) : go('catalog'))}
+          percent={total > 0 ? Math.round((done / total) * 100) : 0}
+          title={freePlan.title}
+        />
+      )}
+      {premiumPlans.map((program) => (
+        <WorkoutCard
+          isPremium={program.isPremium}
+          key={program.slug}
+          meta={[`${program.daysTotal} дней`]}
+          onClick={() => go('paywall')}
+          thumb="peach"
+          title={program.title}
+        />
+      ))}
     </section>
   )
 }
 
-function LockedScreen({ go }: { go: (screen: Screen) => void }) {
+function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: Workout }) {
   return (
     <section className="screen">
       <TopBar onBack={() => go('catalog')} right="🔒" />
       <div className="video muted-video" />
-      <h2 className="compact-title">Кор без скручиваний</h2>
-      <p className="lead">Premium-тренировка из плана для глубоких мышц корпуса.</p>
+      <h2 className="compact-title">{workout.title}</h2>
+      <p className="lead">{workout.description}</p>
       <div className="facts">
-        <Fact value="18" label="мин" />
-        <Fact value="0" label="инвентарь" />
-        <Fact value="easy" label="уровень" />
+        <Fact value={String(workout.durationMin)} label="мин" />
+        <Fact value={String(workout.equipment.length)} label="инвентарь" />
+        <Fact value={levelFactLabels[workout.level]} label="уровень" />
       </div>
       <div className="paywall small-paywall">
         <div>
@@ -500,11 +628,7 @@ function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
             Откройте планы, каталог, прогресс и мягкое движение под ваше
             состояние.
           </p>
-          {[
-            '3 мини-плана на 5–7 дней',
-            'Premium-каталог тренировок',
-            'Избранное, история и отметка “Я сделала”',
-          ].map((feature) => (
+          {paywallFeatures.map((feature) => (
             <div className="feature" key={feature}>
               <span className="check">✓</span>
               <span>{feature}</span>
@@ -525,7 +649,11 @@ function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
   )
 }
 
-function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
+function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => void }) {
+  const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
+  const { done, total } = data.progress.planProgress
+  const todayDay = plan?.days[done] ?? null
+
   return (
     <section className="screen">
       <TopBar title="Доступ" right="✓" />
@@ -541,12 +669,25 @@ function SuccessScreen({ go }: { go: (screen: Screen) => void }) {
         <h3>С чего начать</h3>
         <small>рекомендация</small>
       </div>
-      <ProgramCard onClick={() => go('plans')} />
+      {plan && (
+        <ProgramCard
+          note={todayDay ? `Сегодня: ${todayDay.title}` : null}
+          onClick={() => go('plans')}
+          percent={total > 0 ? Math.round((done / total) * 100) : 0}
+          title={plan.title}
+        />
+      )}
     </section>
   )
 }
 
-function ProgressScreen({ showToast }: { showToast: (message: string) => void }) {
+function ProgressScreen({
+  progress,
+  showToast,
+}: {
+  progress: ProgressSummary
+  showToast: (message: string) => void
+}) {
   return (
     <section className="screen">
       <TopBar title="Прогресс" right="↗" />
@@ -556,10 +697,10 @@ function ProgressScreen({ showToast }: { showToast: (message: string) => void })
         <p>Прогресс поддерживает регулярность, но не наказывает за пропуски.</p>
       </div>
       <div className="stats">
-        <Stat value="4" label="тренировки" />
-        <Stat value="62" label="минуты" />
-        <Stat value="3" label="дня подряд" />
-        <Stat value="3/7" label="план" />
+        <Stat value={String(progress.workouts)} label="тренировки" />
+        <Stat value={String(progress.minutes)} label="минуты" />
+        <Stat value={String(progress.streakDays)} label="дня подряд" />
+        <Stat value={`${progress.planProgress.done}/${progress.planProgress.total}`} label="план" />
       </div>
       <button className="cta lime full" onClick={() => showToast('Уже отмечено')} type="button">
         Я сделала тренировку
@@ -568,19 +709,27 @@ function ProgressScreen({ showToast }: { showToast: (message: string) => void })
   )
 }
 
-function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
+function ProfileScreen({ go, me }: { go: (screen: Screen) => void; me: UserProfile }) {
+  const accessUntil = formatAccessDate(me.access.expiresAt)
+
   return (
     <section className="screen">
-      <TopBar title="Профиль" onBack={() => go('home')} right="К" />
+      <TopBar title="Профиль" onBack={() => go('home')} right={me.firstName.charAt(0) || 'К'} />
       <div className="profile-card">
-        <h3>Катя</h3>
-        <p className="lead">Telegram ID связан</p>
+        <h3>{me.firstName}</h3>
+        <p className="lead">
+          {me.telegramUserId !== null ? 'Telegram ID связан' : 'Браузерный прототип'}
+        </p>
       </div>
       <div className="program">
-        <div className="badge">Premium активен</div>
+        <div className="badge">
+          {me.access.isPremium ? 'Premium активен' : 'Бесплатный доступ'}
+        </div>
         <h3>Подписка через Tribute</h3>
         <p className="lead profile-lead">
-          Доступ открыт до 18 июля. Продление управляется в Tribute.
+          {me.access.isPremium && accessUntil
+            ? `Доступ открыт до ${accessUntil}. Продление управляется в Tribute.`
+            : 'Premium откроет планы, каталог и прогресс. Оплата — через Tribute.'}
         </p>
         <button className="cta lime full" type="button">
           Управлять подпиской
@@ -595,15 +744,15 @@ function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
 
 function WorkoutCard({
   title,
-  access,
+  isPremium,
   meta,
   thumb,
   onClick,
 }: {
   title: string
-  access: string
+  isPremium: boolean
   meta: string[]
-  thumb?: string
+  thumb?: string | null
   onClick: () => void
 }) {
   return (
@@ -612,27 +761,39 @@ function WorkoutCard({
       <span className="workout-body">
         <strong>{title}</strong>
         <span className="meta">
-          <span className={`pill ${access === 'premium' ? 'premium' : 'free'}`}>{access}</span>
+          <span className={`pill ${isPremium ? 'premium' : 'free'}`}>
+            {isPremium ? 'premium' : 'free'}
+          </span>
           {meta.map((item) => (
             <span className="pill" key={item}>
               {item}
             </span>
           ))}
         </span>
-        <small>{access === 'premium' ? 'Открыть →' : 'Начать →'}</small>
+        <small>{isPremium ? 'Открыть →' : 'Начать →'}</small>
       </span>
     </button>
   )
 }
 
-function ProgramCard({ onClick }: { onClick: () => void }) {
+function ProgramCard({
+  title,
+  percent,
+  note,
+  onClick,
+}: {
+  title: string
+  percent: number
+  note?: string | null
+  onClick: () => void
+}) {
   return (
     <button className="program" onClick={onClick} type="button">
-      <h3>7 дней для спины и осанки</h3>
+      <h3>{title}</h3>
       <div className="progress">
-        <span style={{ width: '43%' }} />
+        <span style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }} />
       </div>
-      <p className="program-note">Сегодня: грудной отдел + дыхание</p>
+      {note && <p className="program-note">{note}</p>}
     </button>
   )
 }
