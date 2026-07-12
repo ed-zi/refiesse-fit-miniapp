@@ -11,6 +11,7 @@ import {
   type WorkoutCardDto,
   type WorkoutDetailDto,
 } from '../mappers.ts';
+import { parseOnboarding } from './me.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
 
 const catalogQuerySchema = z.object({
@@ -33,6 +34,24 @@ const workoutParamsSchema = z.object({
 interface CatalogResponse {
   categories: CategoryDto[];
   workouts: WorkoutCardDto[];
+}
+
+/**
+ * Маппинг goal из онбординга («Что сейчас нужно телу?», значения из
+ * apps/miniapp onboardingSteps) → slug категории (content-matrix §2).
+ */
+const GOAL_TO_CATEGORY_SLUG: Record<string, string> = {
+  'Шея и плечи зажаты': 'spina',
+  'Поясница устала': 'lower-back',
+  'Кор и живот': 'kor',
+  'Расслабиться перед сном': 'relaxation',
+};
+
+/** Номер дня в году (UTC, 1..366) — ключ детерминированной ротации. */
+function utcDayOfYear(now: Date): number {
+  const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 1);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.floor((today - startOfYear) / 86_400_000) + 1;
 }
 
 export function registerCatalogRoutes(app: FastifyInstance): void {
@@ -71,6 +90,51 @@ export function registerCatalogRoutes(app: FastifyInstance): void {
       workouts: workouts.map(toWorkoutCardDto),
     };
   });
+
+  /**
+   * GET /workouts/day — «тренировка дня». Только free-контент.
+   * Если у юзера сохранён onboarding.goal — предпочитаем free-тренировку из
+   * соответствующей категории; иначе (или если в категории нет free) —
+   * ротация по всем free по дню года. Детерминированно в рамках UTC-дня.
+   * Зарегистрирован ДО /workouts/:slug, чтобы не перехватывался параметром.
+   */
+  app.get(
+    '/workouts/day',
+    { preHandler: authenticate },
+    async (request): Promise<{ workout: WorkoutDetailDto }> => {
+      const freeWorkouts = await app.prisma.workout.findMany({
+        where: { isPublished: true, access: 'free' },
+        include: { category: true },
+        orderBy: { slug: 'asc' },
+      });
+      if (freeWorkouts.length === 0) {
+        throw new AppError(404, 'NOT_FOUND', 'No free workouts available');
+      }
+
+      const user = await app.prisma.user.findUnique({
+        where: { id: request.user.userId },
+        select: { onboarding: true },
+      });
+      const goal = parseOnboarding(user?.onboarding)?.goal;
+      const preferredCategory = goal !== undefined ? GOAL_TO_CATEGORY_SLUG[goal] : undefined;
+
+      let pool = freeWorkouts;
+      if (preferredCategory !== undefined) {
+        const matching = freeWorkouts.filter((w) => w.category.slug === preferredCategory);
+        if (matching.length > 0) {
+          pool = matching;
+        }
+      }
+
+      const workout = pool[utcDayOfYear(new Date()) % pool.length];
+      if (!workout) {
+        throw new AppError(404, 'NOT_FOUND', 'No free workouts available');
+      }
+
+      // Пул состоит только из free — видео отдаём всегда.
+      return { workout: toWorkoutDetailDto(workout, { includeVideo: true }) };
+    },
+  );
 
   /**
    * GET /workouts/:slug — детальная карточка.

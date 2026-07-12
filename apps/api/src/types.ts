@@ -19,20 +19,37 @@ export interface UserDto {
   createdAt: string;
 }
 
-/** Заглушка доступа до Спринта 3 (Tribute/Subscription). */
-export interface AccessDto {
-  tier: 'free';
+/** Заглушка доступа до Спринта 3 (Tribute/Subscription). = shared AccessStatus. */
+export interface AccessStatus {
+  isPremium: boolean;
+  status: 'active' | 'cancelled' | 'expired' | 'none';
+  expiresAt: string | null;
+}
+
+/** = shared OnboardingAnswers (результат «Подбора»). */
+export interface OnboardingAnswers {
+  goal: string;
+  time: string;
+  /** Мультивыбор; пустой массив = «без инвентаря» (валидное состояние). */
+  equipment: string[];
+  intensity: string;
+}
+
+/** = shared UserProfile (плоский ответ GET /me). */
+export interface UserProfile {
+  id: string;
+  telegramUserId: number | null;
+  firstName: string;
+  lastName?: string | null;
+  username?: string | null;
+  onboarding: OnboardingAnswers | null;
+  access: AccessStatus;
 }
 
 export interface AuthResponse {
   token: string;
   expiresIn: string;
   user: UserDto;
-}
-
-export interface MeResponse {
-  user: UserDto;
-  access: AccessDto;
 }
 
 export interface ApiErrorBody {

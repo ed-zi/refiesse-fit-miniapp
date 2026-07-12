@@ -65,12 +65,9 @@ model User {
   username       String?
   languageCode   String?  @map("language_code")
 
-  // Результат онбординга (подбор). equipment — мультивыбор (массив).
-  onboardingGoal      String?  @map("onboarding_goal")
-  onboardingTime      String?  @map("onboarding_time")
-  onboardingEquipment String[] @map("onboarding_equipment")
-  onboardingIntensity String?  @map("onboarding_intensity")
-  onboardingUpdatedAt DateTime? @map("onboarding_updated_at")
+  // Результат онбординга (подбор): JSON { goal, time, equipment[], intensity }.
+  // Контракт S2-A: хранится одним nullable Json-полем (см. shared OnboardingAnswers).
+  onboarding Json?
 
   isAdmin   Boolean  @default(false) @map("is_admin")
   createdAt DateTime @default(now()) @map("created_at")

@@ -109,7 +109,7 @@ describe('POST /auth/telegram', () => {
 });
 
 describe('GET /me', () => {
-  it('с валидным токеном → 200, правильный telegramUserId и access.tier=free', async () => {
+  it('с валидным токеном → 200, плоский UserProfile (контракт S2-A)', async () => {
     const auth = await app.inject({
       method: 'POST',
       url: '/auth/telegram',
@@ -125,8 +125,11 @@ describe('GET /me', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.user.telegramUserId).toBe('424242');
-    expect(body.access).toEqual({ tier: 'free' });
+    expect(body.telegramUserId).toBe(424242);
+    expect(body.firstName).toBe('Rita');
+    expect(body.onboarding).toBeNull();
+    expect(body.access).toEqual({ isPremium: false, status: 'none', expiresAt: null });
+    expect(typeof body.id).toBe('string');
   });
 
   it('без токена → 401 в едином формате ошибок', async () => {
