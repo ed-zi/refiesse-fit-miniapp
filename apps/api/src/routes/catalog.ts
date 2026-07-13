@@ -76,18 +76,19 @@ export function registerCatalogRoutes(app: FastifyInstance): void {
       where.level = query.level;
     }
 
-    const [categories, workouts] = await Promise.all([
+    const [categories, workouts, unlocked] = await Promise.all([
       app.prisma.category.findMany({ orderBy: { sortOrder: 'asc' } }),
       app.prisma.workout.findMany({
         where,
         include: { category: true },
         orderBy: [{ durationMin: 'asc' }, { slug: 'asc' }],
       }),
+      hasAccess(app.prisma, request.user.userId),
     ]);
 
     return {
       categories: categories.map(toCategoryDto),
-      workouts: workouts.map(toWorkoutCardDto),
+      workouts: workouts.map((workout) => toWorkoutCardDto(workout, { unlocked })),
     };
   });
 

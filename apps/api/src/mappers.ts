@@ -34,18 +34,18 @@ export interface WorkoutCardDto {
   level: 'beginner' | 'medium' | 'advanced';
   equipment: string[];
   isPremium: boolean;
+  /** true = premium-контент закрыт для этого пользователя. */
+  isLocked: boolean;
   description: string;
   cautions: string;
   categorySlug: string;
   thumbColor: string | null;
 }
 
-/** Детальная карточка: shared Workout + isLocked. */
+/** Детальная карточка: shared Workout + videoUrl. */
 export interface WorkoutDetailDto extends WorkoutCardDto {
   /** null, если premium без доступа (метаданные отдаём, контент — нет). */
   videoUrl: string | null;
-  /** true = premium-контент закрыт для этого пользователя. */
-  isLocked: boolean;
 }
 
 /** = shared ProgramDay (workoutSlug вместо внутреннего workoutId). */
@@ -78,7 +78,11 @@ export function toCategoryDto(category: Category): CategoryDto {
 
 type WorkoutWithCategory = Workout & { category: Category };
 
-export function toWorkoutCardDto(workout: WorkoutWithCategory): WorkoutCardDto {
+export function toWorkoutCardDto(
+  workout: WorkoutWithCategory,
+  options: { unlocked: boolean },
+): WorkoutCardDto {
+  const isPremium = workout.access === 'premium';
   return {
     id: workout.id,
     slug: workout.slug,
@@ -87,7 +91,8 @@ export function toWorkoutCardDto(workout: WorkoutWithCategory): WorkoutCardDto {
     durationMin: workout.durationMin,
     level: workout.level,
     equipment: workout.equipment,
-    isPremium: workout.access === 'premium',
+    isPremium,
+    isLocked: isPremium && !options.unlocked,
     description: workout.description,
     cautions: workout.cautions,
     categorySlug: workout.category.slug,
@@ -100,7 +105,7 @@ export function toWorkoutDetailDto(
   options: { includeVideo: boolean },
 ): WorkoutDetailDto {
   return {
-    ...toWorkoutCardDto(workout),
+    ...toWorkoutCardDto(workout, { unlocked: options.includeVideo }),
     videoUrl: options.includeVideo ? workout.videoUrl : null,
     isLocked: !options.includeVideo,
   };
