@@ -22,6 +22,16 @@ const envSchema = z.object({
   INIT_DATA_MAX_AGE_SEC: z.coerce.number().int().positive().default(86_400),
   /** Разрешённый origin фронта. Не задан → dev-режим, разрешаем всё. */
   CORS_ORIGIN: z.string().min(1).optional(),
+  /**
+   * API-ключ Tribute — ключ HMAC-проверки подписи webhook (trbt-signature).
+   * Не задан → POST /api/tribute/webhook отвечает 503 TRIBUTE_DISABLED.
+   */
+  TRIBUTE_API_KEY: z.string().min(1).optional(),
+  /**
+   * Токен ручных admin-операций (header x-admin-token).
+   * Не задан → /admin/* отвечают 503 ADMIN_DISABLED.
+   */
+  ADMIN_TOKEN: z.string().min(1).optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
@@ -33,6 +43,8 @@ export interface AppConfig {
   jwtExpiresIn: string;
   initDataMaxAgeSec: number;
   corsOrigin: string | undefined;
+  tributeApiKey: string | undefined;
+  adminToken: string | undefined;
   port: number;
   nodeEnv: 'development' | 'test' | 'production';
 }
@@ -58,6 +70,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     jwtExpiresIn: e.JWT_EXPIRES_IN,
     initDataMaxAgeSec: e.INIT_DATA_MAX_AGE_SEC,
     corsOrigin: e.CORS_ORIGIN,
+    tributeApiKey: e.TRIBUTE_API_KEY,
+    adminToken: e.ADMIN_TOKEN,
     port: e.PORT,
     nodeEnv: e.NODE_ENV,
   };

@@ -5,6 +5,11 @@ import { TEST_DATABASE_URL } from './testDb.ts';
 /** Фейковый bot token: подпись в тестах строится тем же алгоритмом, что у Telegram. */
 export const TEST_BOT_TOKEN = '123456789:TEST-FAKE-BOT-TOKEN-for-vitest';
 
+/** Фейковый API-ключ Tribute — подпись webhook в тестах строится им же. */
+export const TEST_TRIBUTE_API_KEY = 'test-tribute-api-key';
+
+export const TEST_ADMIN_TOKEN = 'test-admin-token';
+
 export const testConfig: AppConfig = {
   databaseUrl: TEST_DATABASE_URL,
   botToken: TEST_BOT_TOKEN,
@@ -12,6 +17,8 @@ export const testConfig: AppConfig = {
   jwtExpiresIn: '1h',
   initDataMaxAgeSec: 86_400,
   corsOrigin: undefined,
+  tributeApiKey: TEST_TRIBUTE_API_KEY,
+  adminToken: TEST_ADMIN_TOKEN,
   port: 0,
   nodeEnv: 'test',
 };
