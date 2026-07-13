@@ -1,0 +1,18 @@
+# Railway — конфигурация API-сервиса (apps/api).
+# В UI: New Service → GitHub repo → Settings → Root Directory = apps/api.
+# Секреты (DATABASE_URL, BOT_TOKEN, JWT_SECRET, TRIBUTE_API_KEY, ADMIN_TOKEN,
+# CORS_ORIGIN, SENTRY_DSN, NODE_ENV=production) задаются в Variables сервиса.
+# DATABASE_URL удобно сослать на Postgres-плагин: ${{ Postgres.DATABASE_URL }}.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Railway ждёт 200 на /health перед переключением трафика на новый деплой.
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+# startCommand не задаём: Dockerfile ENTRYPOINT сам делает
+# `prisma migrate deploy` и запуск сервера.

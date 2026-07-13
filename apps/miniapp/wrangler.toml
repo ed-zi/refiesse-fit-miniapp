@@ -1,0 +1,17 @@
+# Cloudflare Pages — конфигурация проекта Mini App (apps/miniapp).
+#
+# Основной путь деплоя прода — git-интеграция Cloudflare Pages (см.
+# docs/ops/deployment.md): при пуше в main Cloudflare сам ставит зависимости
+# и собирает. Настройки сборки задаются в дашборде:
+#   Build command:            npm run build
+#   Build output directory:   apps/miniapp/dist
+#   Root directory:           / (корень репозитория — нужен для npm workspaces)
+#   Build env vars:           VITE_API_URL, VITE_TRIBUTE_LINK, VITE_SENTRY_DSN(опц.)
+#                             (VITE_DEV_INIT_DATA в прод НЕ задавать)
+#
+# Этот файл нужен для ручного/CI-деплоя уже собранной статики через Wrangler CLI:
+#   (из apps/miniapp, после `npm run build --workspace apps/miniapp`)
+#   npx wrangler pages deploy dist
+name = "refiesse-fit-miniapp"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"

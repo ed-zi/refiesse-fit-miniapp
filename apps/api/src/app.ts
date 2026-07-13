@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 import { loadConfig, type AppConfig } from './config.ts';
 import { createPrismaConnection } from './db/prisma.ts';
 import { AppError } from './errors.ts';
+import { captureException, initSentry } from './observability/sentry.ts';
 import { registerAccessRoutes } from './routes/access.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAdminContentRoutes } from './routes/adminContent.ts';
@@ -45,6 +46,13 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   });
 
   app.decorate('config', config);
+
+  // Sentry (S4-2): включается ТОЛЬКО при заданном SENTRY_DSN, иначе no-op.
+  // Инициализируем до регистрации роутов, чтобы ловить ошибки из хендлеров.
+  const sentryEnabled = initSentry(config);
+  if (sentryEnabled) {
+    app.log.info('Sentry error monitoring enabled');
+  }
 
   // CORS: явный origin из env; если не задан (dev) — разрешаем всё.
   await app.register(cors, {
@@ -102,6 +110,9 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
 
     if (statusCode >= 500) {
       request.log.error({ err: error }, 'Unhandled error');
+      // В Sentry уходит только объект ошибки (stack), без тела/заголовков запроса
+      // (sendDefaultPii=false) — чтобы не утекли initData/JWT/подпись/секреты.
+      captureException(error);
       return reply.status(statusCode).send({
         error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
       });

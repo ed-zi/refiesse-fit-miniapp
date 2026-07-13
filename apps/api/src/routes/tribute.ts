@@ -58,8 +58,16 @@ export function registerTributeRoutes(app: FastifyInstance): void {
       const signatureHeader = request.headers['trbt-signature'];
       const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
 
-      // 1. Подпись. Невалидна → 403, событие НЕ применяется и НЕ логируется.
+      // Структурный лог факта приёма (без тела/подписи — только метаданные).
+      request.log.info(
+        { bytes: raw.length, hasSignature: signature !== undefined },
+        'tribute webhook received',
+      );
+
+      // 1. Подпись. Невалидна → 403, событие НЕ применяется. Логируем факт
+      //    отказа (signatureOk=false), НО не саму подпись и не payload.
       if (!verifyTributeSignature(raw, signature, apiKey)) {
+        request.log.warn({ signatureOk: false }, 'tribute webhook signature rejected');
         throw new AppError(403, 'INVALID_SIGNATURE', 'Invalid or missing trbt-signature');
       }
 

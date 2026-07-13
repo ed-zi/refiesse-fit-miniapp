@@ -34,6 +34,12 @@ const envSchema = z.object({
   ADMIN_TOKEN: z.string().min(1).optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /**
+   * DSN Sentry для мониторинга ошибок (S4-2). Не задан → Sentry выключен
+   * (полный no-op: ничего не инициализируется и не отправляется наружу).
+   * Dev/test работают без Sentry и не требуют этой переменной.
+   */
+  SENTRY_DSN: z.string().min(1).optional(),
 });
 
 export interface AppConfig {
@@ -47,6 +53,8 @@ export interface AppConfig {
   adminToken: string | undefined;
   port: number;
   nodeEnv: 'development' | 'test' | 'production';
+  /** Опционально: отсутствие поля/undefined → Sentry выключен (S4-2). */
+  sentryDsn?: string | undefined;
 }
 
 export class ConfigError extends Error {
@@ -90,5 +98,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminToken: e.ADMIN_TOKEN,
     port: e.PORT,
     nodeEnv: e.NODE_ENV,
+    sentryDsn: e.SENTRY_DSN,
   };
 }

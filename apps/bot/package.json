@@ -7,13 +7,14 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
+    "start:prod": "tsx src/main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "grammy": "^1.44.0"
+    "grammy": "^1.44.0",
+    "tsx": "^4.23.0"
   },
   "devDependencies": {
-    "tsx": "^4.23.0",
     "typescript": "^7.0.2"
   }
 }

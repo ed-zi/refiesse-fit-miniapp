@@ -1,0 +1,14 @@
+# Railway — конфигурация bot-сервиса (apps/bot).
+# В UI: New Service → тот же GitHub repo → Settings → Root Directory = apps/bot.
+# Variables: BOT_TOKEN (обязателен), WEBAPP_URL (URL Mini App на Cloudflare Pages),
+# NODE_ENV=production.
+#
+# Это worker (long polling) — входящего HTTP нет, healthcheckPath не задаём.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
