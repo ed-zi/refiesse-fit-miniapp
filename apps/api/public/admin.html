@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refiesse Fit — админка</title>
+<style>
+  :root { --line:#d9d9e3; --muted:#6b6b76; --bg:#f6f6f9; --accent:#3b5bdb; --danger:#c92a2a; --ok:#2b8a3e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:#1c1c22; }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:12px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 16px 0 0; }
+  main { padding:20px; max-width:1200px; margin:0 auto; }
+  input, select, button, textarea { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  input:focus, select:focus, textarea:focus { outline:2px solid #b3c0f5; border-color:var(--accent); }
+  button { cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.small { padding:3px 8px; font-size:12px; }
+  button.danger { color:var(--danger); border-color:var(--danger); background:#fff; }
+  .tabs { display:flex; gap:6px; }
+  .tabs button { border-radius:6px 6px 0 0; border-bottom:none; background:#ececf2; }
+  .tabs button.active { background:#fff; font-weight:600; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { background:#fafafc; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  tr:last-child td { border-bottom:none; }
+  tr.err { background:#fff5f5; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; }
+  .badge.premium { background:#e5dbff; color:#5f3dc4; }
+  .badge.free { background:#d3f9d8; color:var(--ok); }
+  .badge.off { background:#ffe3e3; color:var(--danger); }
+  .badge.on { background:#d3f9d8; color:var(--ok); }
+  .muted { color:var(--muted); font-size:12px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  #status { margin-left:auto; font-size:13px; }
+  #status.error { color:var(--danger); }
+  #status.ok { color:var(--ok); }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+  .grid label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+  .video-inp { width:220px; font-size:12px; }
+  details > summary { cursor:pointer; color:var(--accent); }
+  pre { margin:6px 0 0; font-size:11px; background:#fafafc; padding:8px; border-radius:6px; overflow:auto; max-height:200px; }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Refiesse Fit — админка</h1>
+  <nav class="tabs">
+    <button data-tab="workouts" class="active">Тренировки</button>
+    <button data-tab="users">Пользователи</button>
+    <button data-tab="tribute">Tribute events</button>
+  </nav>
+  <input id="token" type="password" placeholder="admin-токен" size="22">
+  <button id="saveToken" class="primary">Войти</button>
+  <span id="status"></span>
+</header>
+<main>
+  <!-- ================= Тренировки ================= -->
+  <section id="tab-workouts">
+    <div class="row">
+      <button id="newWorkoutBtn" class="primary">+ Новая тренировка</button>
+      <span class="muted">Premium/публикация переключаются кнопками; видео-URL правится в строке.</span>
+    </div>
+    <div id="workoutForm" class="panel" style="display:none">
+      <strong>Новая тренировка</strong>
+      <div class="grid" style="margin-top:10px">
+        <label>slug (a-z, дефисы) <input id="wf-slug" placeholder="soft-neck-2"></label>
+        <label>Название <input id="wf-title"></label>
+        <label>Цель/состояние <input id="wf-goal"></label>
+        <label>Длительность, мин <input id="wf-duration" type="number" min="1" value="10"></label>
+        <label>Уровень
+          <select id="wf-level"><option value="beginner">beginner</option><option value="medium">medium</option><option value="advanced">advanced</option></select>
+        </label>
+        <label>Категория <select id="wf-category"></select></label>
+        <label>Доступ
+          <select id="wf-access"><option value="free">free</option><option value="premium">premium</option></select>
+        </label>
+        <label>Инвентарь (через запятую) <input id="wf-equipment" placeholder="коврик, резинка"></label>
+        <label>Видео URL <input id="wf-video" placeholder="https://…"></label>
+      </div>
+      <div class="grid" style="margin-top:10px; grid-template-columns:1fr 1fr">
+        <label>Описание <textarea id="wf-description" rows="2"></textarea></label>
+        <label>Осторожности <textarea id="wf-cautions" rows="2"></textarea></label>
+      </div>
+      <div class="row">
+        <button id="wf-save" class="primary">Создать</button>
+        <button id="wf-cancel">Отмена</button>
+      </div>
+    </div>
+    <div class="wrap"><table id="workoutsTable">
+      <thead><tr><th>Название</th><th>Категория</th><th>Мин</th><th>Доступ</th><th>Публикация</th><th>Видео URL</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <!-- ================= Пользователи ================= -->
+  <section id="tab-users" style="display:none">
+    <div class="row">
+      <input id="userQuery" placeholder="telegram id / username / имя" size="30">
+      <button id="userSearchBtn" class="primary">Найти</button>
+      <span class="muted">Пустой запрос — последние 50.</span>
+    </div>
+    <div class="wrap"><table id="usersTable">
+      <thead><tr><th>Telegram ID</th><th>Имя</th><th>Username</th><th>Доступ</th><th>До</th><th>Действия</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <!-- ================= Tribute ================= -->
+  <section id="tab-tribute" style="display:none">
+    <div class="row">
+      <button id="tributeReloadBtn" class="primary">Обновить</button>
+      <span class="muted">Строки с ошибкой подсвечены. Reprocess — повторное применение события.</span>
+    </div>
+    <div class="wrap"><table id="tributeTable">
+      <thead><tr><th>Событие</th><th>Telegram ID</th><th>Получено</th><th>Применено</th><th>Ошибка</th><th>Payload</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (sel) { return document.querySelector(sel); };
+  var statusEl = $('#status');
+  var categories = [];
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text || '';
+    statusEl.className = kind || '';
+  }
+  function token() { return sessionStorage.getItem('adminToken') || ''; }
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch];
+    });
+  }
+
+  async function api(method, path, body) {
+    var res = await fetch(path, {
+      method: method,
+      headers: Object.assign(
+        { 'x-admin-token': token() },
+        body !== undefined ? { 'content-type': 'application/json' } : {}
+      ),
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+    var json = null;
+    try { json = await res.json(); } catch (e) { /* пустое тело */ }
+    if (!res.ok) {
+      var message = (json && json.error && json.error.message) || ('HTTP ' + res.status);
+      throw new Error(message);
+    }
+    return json;
+  }
+
+  function guard(fn) {
+    return function () {
+      Promise.resolve(fn.apply(null, arguments)).then(
+        function () { setStatus('Готово', 'ok'); },
+        function (err) { setStatus(err.message, 'error'); }
+      );
+    };
+  }
+
+  // ---------------- вкладки ----------------
+  document.querySelectorAll('.tabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tabs button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      ['workouts', 'users', 'tribute'].forEach(function (name) {
+        $('#tab-' + name).style.display = name === btn.dataset.tab ? '' : 'none';
+      });
+      if (btn.dataset.tab === 'workouts') loadWorkouts();
+      if (btn.dataset.tab === 'users') searchUsers();
+      if (btn.dataset.tab === 'tribute') loadTribute();
+    });
+  });
+
+  // ---------------- токен ----------------
+  $('#token').value = token();
+  $('#saveToken').addEventListener('click', guard(async function () {
+    sessionStorage.setItem('adminToken', $('#token').value.trim());
+    await loadWorkouts(); // проверка токена сразу
+  }));
+
+  // ---------------- тренировки ----------------
+  var loadWorkouts = guard(async function () {
+    var data = await api('GET', '/admin/workouts');
+    var cats = await api('GET', '/admin/categories');
+    categories = cats.items;
+    var catSelect = $('#wf-category');
+    catSelect.innerHTML = categories.map(function (c) {
+      return '<option value="' + esc(c.id) + '">' + esc(c.title) + ' (' + esc(c.slug) + ')</option>';
+    }).join('');
+
+    var tbody = $('#workoutsTable tbody');
+    tbody.innerHTML = '';
+    data.items.forEach(function (w) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + esc(w.title) + '<div class="muted">' + esc(w.slug) + '</div></td>' +
+        '<td>' + esc(w.category ? w.category.title : '?') + '</td>' +
+        '<td>' + esc(w.durationMin) + '</td>' +
+        '<td><button class="small toggle-access badge ' + (w.access === 'premium' ? 'premium' : 'free') + '">' + esc(w.access) + '</button></td>' +
+        '<td><button class="small toggle-pub badge ' + (w.isPublished ? 'on' : 'off') + '">' + (w.isPublished ? 'опубликована' : 'скрыта') + '</button></td>' +
+        '<td><input class="video-inp" value="' + esc(w.videoUrl || '') + '" placeholder="нет видео"> <button class="small save-video">Сохранить</button></td>';
+      tr.querySelector('.toggle-access').addEventListener('click', guard(async function () {
+        await api('PUT', '/admin/workouts/' + w.id, { access: w.access === 'premium' ? 'free' : 'premium' });
+        loadWorkouts();
+      }));
+      tr.querySelector('.toggle-pub').addEventListener('click', guard(async function () {
+        await api('PUT', '/admin/workouts/' + w.id, { isPublished: !w.isPublished });
+        loadWorkouts();
+      }));
+      tr.querySelector('.save-video').addEventListener('click', guard(async function () {
+        var value = tr.querySelector('.video-inp').value.trim();
+        await api('PUT', '/admin/workouts/' + w.id, { videoUrl: value === '' ? null : value });
+      }));
+      tbody.appendChild(tr);
+    });
+  });
+
+  $('#newWorkoutBtn').addEventListener('click', function () {
+    $('#workoutForm').style.display = $('#workoutForm').style.display === 'none' ? '' : 'none';
+  });
+  $('#wf-cancel').addEventListener('click', function () { $('#workoutForm').style.display = 'none'; });
+  $('#wf-save').addEventListener('click', guard(async function () {
+    var equipment = $('#wf-equipment').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var video = $('#wf-video').value.trim();
+    await api('POST', '/admin/workouts', {
+      slug: $('#wf-slug').value.trim(),
+      title: $('#wf-title').value.trim(),
+      goal: $('#wf-goal').value.trim(),
+      durationMin: Number($('#wf-duration').value),
+      level: $('#wf-level').value,
+      categoryId: $('#wf-category').value,
+      access: $('#wf-access').value,
+      equipment: equipment,
+      videoUrl: video === '' ? null : video,
+      description: $('#wf-description').value.trim(),
+      cautions: $('#wf-cautions').value.trim()
+    });
+    $('#workoutForm').style.display = 'none';
+    loadWorkouts();
+  }));
+
+  // ---------------- пользователи ----------------
+  var searchUsers = guard(async function () {
+    var query = $('#userQuery').value.trim();
+    var data = await api('GET', '/admin/users' + (query ? '?query=' + encodeURIComponent(query) : ''));
+    var tbody = $('#usersTable tbody');
+    tbody.innerHTML = '';
+    data.items.forEach(function (u) {
+      var access = u.access || {};
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + esc(u.telegramUserId) + '</td>' +
+        '<td>' + esc(((u.firstName || '') + ' ' + (u.lastName || '')).trim()) + '</td>' +
+        '<td>' + esc(u.username || '—') + '</td>' +
+        '<td><span class="badge ' + (access.isPremium ? 'premium' : 'free') + '">' + esc(access.isPremium ? 'premium (' + access.status + ')' : access.status) + '</span></td>' +
+        '<td>' + esc(access.expiresAt ? access.expiresAt.slice(0, 10) : '—') + '</td>' +
+        '<td><button class="small grant">Grant 30 дней</button> <button class="small danger revoke">Revoke</button></td>';
+      tr.querySelector('.grant').addEventListener('click', guard(async function () {
+        await api('POST', '/admin/access/grant', { telegramUserId: u.telegramUserId, days: 30 });
+        searchUsers();
+      }));
+      tr.querySelector('.revoke').addEventListener('click', guard(async function () {
+        await api('POST', '/admin/access/revoke', { telegramUserId: u.telegramUserId });
+        searchUsers();
+      }));
+      tbody.appendChild(tr);
+    });
+  });
+  $('#userSearchBtn').addEventListener('click', searchUsers);
+  $('#userQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') searchUsers(); });
+
+  // ---------------- tribute ----------------
+  var loadTribute = guard(async function () {
+    var data = await api('GET', '/admin/tribute-events?limit=50');
+    var tbody = $('#tributeTable tbody');
+    tbody.innerHTML = '';
+    data.items.forEach(function (ev) {
+      var tr = document.createElement('tr');
+      if (ev.error) tr.className = 'err';
+      tr.innerHTML =
+        '<td>' + esc(ev.name) + '<div class="muted">' + esc(ev.eventId.slice(0, 12)) + '…</div></td>' +
+        '<td>' + esc(ev.telegramUserId == null ? '—' : ev.telegramUserId) + '</td>' +
+        '<td>' + esc(ev.receivedAt.replace('T', ' ').slice(0, 19)) + '</td>' +
+        '<td>' + (ev.processedAt ? esc(ev.processedAt.replace('T', ' ').slice(0, 19)) : '<span class="badge off">нет</span>') + '</td>' +
+        '<td>' + (ev.error ? '<span class="badge off">' + esc(ev.error) + '</span>' : '—') + '</td>' +
+        '<td><details><summary>payload</summary><pre>' + esc(JSON.stringify(ev.payload, null, 2)) + '</pre></details></td>' +
+        '<td>' + (ev.error || !ev.processedAt ? '<button class="small reprocess">Reprocess</button>' : '') + '</td>';
+      var btn = tr.querySelector('.reprocess');
+      if (btn) {
+        btn.addEventListener('click', guard(async function () {
+          var result = await api('POST', '/admin/tribute-events/' + ev.id + '/reprocess');
+          setStatus('Reprocess: ' + result.status, result.status === 'ok' ? 'ok' : 'error');
+          loadTribute();
+        }));
+      }
+      tbody.appendChild(tr);
+    });
+  });
+  $('#tributeReloadBtn').addEventListener('click', loadTribute);
+
+  if (token()) loadWorkouts();
+})();
+</script>
+</body>
+</html>

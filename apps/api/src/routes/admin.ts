@@ -1,15 +1,14 @@
-import { timingSafeEqual } from 'node:crypto';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getAccessStatus } from '../access.ts';
+import { makeRequireAdmin } from '../adminAuth.ts';
 import { AppError } from '../errors.ts';
 import type { AccessStatus } from '../types.ts';
 import type { User } from '../generated/prisma/client.ts';
 
 /**
- * Ручные grant/revoke для поддержки — ДО полной админки (S3-1 п.4).
- * Защита: header x-admin-token === env ADMIN_TOKEN.
- * ADMIN_TOKEN не задан → роуты отключены (503 ADMIN_DISABLED).
+ * Ручные grant/revoke для поддержки (S3-1 п.4).
+ * Защита — общий guard makeRequireAdmin (x-admin-token).
  */
 
 const grantBodySchema = z.object({
@@ -20,16 +19,6 @@ const grantBodySchema = z.object({
 const revokeBodySchema = z.object({
   telegramUserId: z.coerce.number().int().positive(),
 });
-
-/** Сравнение токенов за постоянное время (не палим длину/префикс тайм-атакой). */
-function tokenMatches(provided: string, expected: string): boolean {
-  const providedBuf = Buffer.from(provided, 'utf8');
-  const expectedBuf = Buffer.from(expected, 'utf8');
-  if (providedBuf.length !== expectedBuf.length) {
-    return false;
-  }
-  return timingSafeEqual(providedBuf, expectedBuf);
-}
 
 async function findUserByTelegramId(
   app: FastifyInstance,
@@ -45,16 +34,7 @@ async function findUserByTelegramId(
 }
 
 export function registerAdminRoutes(app: FastifyInstance): void {
-  const requireAdmin = async (request: FastifyRequest): Promise<void> => {
-    const adminToken = app.config.adminToken;
-    if (adminToken === undefined) {
-      throw new AppError(503, 'ADMIN_DISABLED', 'ADMIN_TOKEN is not configured');
-    }
-    const provided = request.headers['x-admin-token'];
-    if (typeof provided !== 'string' || !tokenMatches(provided, adminToken)) {
-      throw new AppError(403, 'FORBIDDEN', 'Invalid admin token');
-    }
-  };
+  const requireAdmin = makeRequireAdmin(app);
 
   /**
    * POST /admin/access/grant { telegramUserId, days } —

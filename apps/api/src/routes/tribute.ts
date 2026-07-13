@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { AppError } from '../errors.ts';
+import { applyTributeEvent, tributeEventSchema } from '../tribute/applyEvent.ts';
 import { verifyTributeSignature } from '../tribute/verifySignature.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
 
@@ -15,41 +15,12 @@ import type { Prisma } from '../generated/prisma/client.ts';
  * формате событий Tribute нет явного event_id; ретраи шлют байт-в-байт то же
  * тело → тот же hash → уникальный индекс TributeEvent.eventId гасит дубль.
  * Если Tribute при ретрае перегенерирует sent_at (тело изменится), событие
- * применится повторно, но обработчики state-setting (status/expiresAt
- * присваиваются из payload, ничего не инкрементируется) — эффект тот же.
+ * применится повторно, но применение state-setting — эффект тот же.
  * TODO(перед продом): сверить с доками Tribute, есть ли настоящий event id.
  *
  * Поток (architecture.md §6): подпись → JSON/zod → запись TributeEvent
- * (create; P2002 = duplicate) → матчинг юзера → применение → processedAt.
+ * (create; P2002 = duplicate) → применение (tribute/applyEvent.ts) → processedAt.
  */
-
-const TRIBUTE_EVENT_NAMES = [
-  'new_subscription',
-  'renewed_subscription',
-  'cancelled_subscription',
-] as const;
-
-// Защищённый парсинг: реальные поля Tribute могут отличаться/добавляться —
-// неизвестные ключи пропускаем (loose), обязательны только name и telegram_user_id.
-const tributeEventSchema = z.looseObject({
-  name: z.enum(TRIBUTE_EVENT_NAMES),
-  created_at: z.string().optional(),
-  sent_at: z.string().optional(),
-  payload: z.looseObject({
-    subscription_id: z.union([z.string(), z.number()]).optional(),
-    telegram_user_id: z.union([z.number().int(), z.string().regex(/^\d+$/)]),
-    expires_at: z.string().optional(),
-  }),
-});
-
-/** ISO-строка → Date; отсутствие/мусор → null (не роняем платёжный контур). */
-function parseExpiresAt(value: string | undefined): Date | null {
-  if (value === undefined) {
-    return null;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -125,96 +96,32 @@ export function registerTributeRoutes(app: FastifyInstance): void {
         throw error;
       }
 
-      // 4. Матчинг пользователя. Нет в БД → сохраняем как unmatched, отвечаем 200
-      //    (Tribute не должен ретраить вечно). TODO(S3+): reprocess из админки.
-      const user = await app.prisma.user.findUnique({ where: { telegramUserId } });
-      if (!user) {
+      // 4. Применение (общая логика с admin reprocess).
+      const outcome = await applyTributeEvent(app.prisma, event);
+
+      if (outcome.status === 'ok') {
         await app.prisma.tributeEvent.update({
           where: { id: eventRecord.id },
-          data: { error: 'UNMATCHED_USER' },
+          data: { processedAt: new Date(), error: null },
         });
-        request.log.warn(
+        request.log.info(
           { eventId, type: event.name, telegramUserId: Number(telegramUserId) },
-          'tribute webhook: user not found (unmatched)',
+          'tribute webhook applied',
         );
-        return { status: 'unmatched' };
+        return { status: 'ok' };
       }
 
-      // 5. Применение к Subscription.
-      const now = new Date();
-      const tributeSubscriptionId =
-        event.payload.subscription_id !== undefined
-          ? String(event.payload.subscription_id)
-          : undefined;
-
-      if (event.name === 'cancelled_subscription') {
-        // Отмена: статус cancelled, expiresAt НЕ трогаем — доступ до конца периода.
-        const existing = await app.prisma.subscription.findUnique({
-          where: { userId: user.id },
-        });
-        if (existing) {
-          await app.prisma.subscription.update({
-            where: { userId: user.id },
-            data: {
-              status: 'cancelled',
-              cancelledAt: now,
-              ...(tributeSubscriptionId !== undefined ? { tributeSubscriptionId } : {}),
-            },
-          });
-        } else {
-          // Отмена без известной подписки — фиксируем состояние как есть.
-          await app.prisma.subscription.create({
-            data: {
-              userId: user.id,
-              status: 'cancelled',
-              expiresAt: parseExpiresAt(event.payload.expires_at),
-              cancelledAt: now,
-              tributeSubscriptionId: tributeSubscriptionId ?? null,
-            },
-          });
-        }
-      } else {
-        // new_subscription / renewed_subscription: активируем до payload.expires_at.
-        const expiresAt = parseExpiresAt(event.payload.expires_at);
-        if (expiresAt === null) {
-          await app.prisma.tributeEvent.update({
-            where: { id: eventRecord.id },
-            data: { error: 'MISSING_OR_INVALID_EXPIRES_AT' },
-          });
-          request.log.warn(
-            { eventId, type: event.name },
-            'tribute webhook: expires_at missing/invalid, subscription untouched',
-          );
-          return { status: 'ignored' };
-        }
-        await app.prisma.subscription.upsert({
-          where: { userId: user.id },
-          create: {
-            userId: user.id,
-            status: 'active',
-            expiresAt,
-            startedAt: now,
-            tributeSubscriptionId: tributeSubscriptionId ?? null,
-          },
-          update: {
-            status: 'active',
-            expiresAt,
-            cancelledAt: null,
-            ...(tributeSubscriptionId !== undefined ? { tributeSubscriptionId } : {}),
-          },
-        });
-      }
-
-      // 6. Помечаем применённым.
+      // unmatched: юзера нет в БД — сохраняем для reprocess из админки, отвечаем 200.
+      // ignored: expires_at отсутствует/битый — подписку не трогаем.
       await app.prisma.tributeEvent.update({
         where: { id: eventRecord.id },
-        data: { processedAt: new Date() },
+        data: { error: outcome.error },
       });
-      request.log.info(
-        { eventId, type: event.name, telegramUserId: Number(telegramUserId) },
-        'tribute webhook applied',
+      request.log.warn(
+        { eventId, type: event.name, telegramUserId: Number(telegramUserId), error: outcome.error },
+        'tribute webhook not applied',
       );
-      return { status: 'ok' };
+      return { status: outcome.status };
     });
   });
 }

@@ -7,6 +7,10 @@ import { createPrismaConnection } from './db/prisma.ts';
 import { AppError } from './errors.ts';
 import { registerAccessRoutes } from './routes/access.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
+import { registerAdminContentRoutes } from './routes/adminContent.ts';
+import { registerAdminTributeRoutes } from './routes/adminTribute.ts';
+import { registerAdminUiRoutes } from './routes/adminUi.ts';
+import { registerAdminUserRoutes } from './routes/adminUsers.ts';
 import { registerAuthRoutes } from './routes/auth.ts';
 import { registerCatalogRoutes } from './routes/catalog.ts';
 import { registerFavoriteRoutes } from './routes/favorites.ts';
@@ -120,6 +124,10 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   registerFavoriteRoutes(app);
   registerAccessRoutes(app);
   registerAdminRoutes(app);
+  registerAdminContentRoutes(app);
+  registerAdminUserRoutes(app);
+  registerAdminTributeRoutes(app);
+  registerAdminUiRoutes(app);
   registerTributeRoutes(app);
 
   return app;
