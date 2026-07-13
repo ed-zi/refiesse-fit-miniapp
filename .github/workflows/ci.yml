@@ -38,3 +38,67 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: E2E · Playwright (beta-flow)
+    runs-on: ubuntu-latest
+    # Полный стек: реальный API + Postgres, фронт (vite) поднимает Playwright globalSetup.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: refiesse
+          POSTGRES_PASSWORD: refiesse
+          POSTGRES_DB: refiesse_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U refiesse -d refiesse_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Стек читает DATABASE_URL; globalSetup не управляет локальным postgres в CI.
+      DATABASE_URL: postgresql://refiesse:refiesse@localhost:5432/refiesse_dev
+      E2E_MANAGE_DB: 'false'
+      CI: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: Prisma migrate + seed
+        working-directory: apps/api
+        run: |
+          npx prisma migrate deploy
+          npx tsx prisma/seed.ts
+
+      - name: Install Playwright Chromium
+        working-directory: apps/miniapp
+        # В CI браузера /opt/pw-browsers нет — качаем стандартно в кэш Playwright.
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        working-directory: apps/miniapp
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/miniapp/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore

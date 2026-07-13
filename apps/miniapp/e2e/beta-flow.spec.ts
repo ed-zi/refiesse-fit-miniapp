@@ -1,0 +1,194 @@
+import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+
+// E2E бета-флоу Refiesse Fit: реальный фронт (vite) против реального API + БД.
+// Навигация по левой панели прототипа (aside.brief — role-кнопки со шагами)
+// и по нижней навигации. Оплата/вебхуки Tribute здесь НЕ гоняются — это
+// интеграционные тесты API (apps/api). Здесь — пользовательский путь во фронте.
+
+/** Подписи кнопок левой навигации (steps в App.tsx). */
+const NAV = {
+  home: 'Home: быстрое действие на сегодня',
+  onboarding: 'Подбор: понять состояние',
+  catalog: 'Каталог: выбрать тренировку',
+  plans: 'Планы: система на 5–7 дней',
+  progress: 'Прогресс: удержание без давления',
+  profile: 'Профиль: подписка и настройки',
+} as const
+
+/** Сетевые 404 логируются Chromium как console error — это не баг приложения. */
+function isBenignConsoleError(message: ConsoleMessage): boolean {
+  const text = message.text()
+  return text.includes('Failed to load resource') || text.includes('favicon')
+}
+
+/** Открыть приложение и дождаться готовности (Home загрузился из API). */
+async function openApp(page: Page): Promise<void> {
+  await page.goto('/')
+  // Данные пришли из API → исчез скелетон, виден заголовок Home.
+  await expect(page.getByRole('heading', { name: 'Что нужно телу сегодня?' })).toBeVisible()
+}
+
+async function navTo(page: Page, label: string): Promise<void> {
+  await page.getByRole('button', { name: label }).click()
+}
+
+test.describe('Refiesse Fit — бета-флоу', () => {
+  test('Home загружается из API без ошибок консоли', async ({ page }) => {
+    const errors: string[] = []
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' && !isBenignConsoleError(msg)) {
+        errors.push(msg.text())
+      }
+    })
+    page.on('pageerror', (err) => errors.push(err.message))
+
+    await openApp(page)
+
+    // Контент реальный, не заглушка: категории и «Тренировка дня» из БД.
+    await expect(page.getByRole('heading', { name: 'Тренировка дня' })).toBeVisible()
+    // Экран загрузки ушёл (нет aria-busy скелетона).
+    await expect(page.locator('section[aria-busy="true"]')).toHaveCount(0)
+
+    expect(errors, `console errors: ${errors.join(' | ')}`).toEqual([])
+  })
+
+  test('Каталог показывает тренировки из БД (>3, есть free и premium)', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.catalog)
+
+    const cards = page.locator('.workout-card')
+    await expect(cards.first()).toBeVisible()
+    expect(await cards.count()).toBeGreaterThan(3)
+
+    // В каталоге присутствуют и бесплатные, и premium карточки.
+    await expect(page.locator('.workout-card .pill.free').first()).toBeVisible()
+    await expect(page.locator('.workout-card .pill.premium').first()).toBeVisible()
+  })
+
+  test('Free-тренировка → «Я сделала» → toast и прогресс ≥1 тренировка и минуты', async ({
+    page,
+  }) => {
+    await openApp(page)
+    await navTo(page, NAV.catalog)
+
+    // Первая карточка с бейджем free ведёт на экран тренировки (не locked).
+    const freeCard = page.locator('.workout-card', { has: page.locator('.pill.free') }).first()
+    await expect(freeCard).toBeVisible()
+    await freeCard.click()
+
+    // Экран тренировки: есть кнопки «Начать тренировку» и «Я сделала».
+    await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
+    await page.getByRole('button', { name: 'Я сделала' }).click()
+
+    // Мягкий toast-подтверждение.
+    await expect(page.locator('.toast.show')).toContainText('Записано')
+
+    // Автопереход на экран прогресса: тренировки ≥ 1, минуты > 0.
+    await expect(page.getByRole('heading', { name: 'Даже 10 минут считаются' })).toBeVisible()
+
+    const workoutsStat = page.locator('.stat', { hasText: 'тренировки' }).locator('b')
+    const minutesStat = page.locator('.stat', { hasText: 'минуты' }).locator('b')
+    await expect(workoutsStat).toBeVisible()
+    expect(Number(await workoutsStat.innerText())).toBeGreaterThanOrEqual(1)
+    expect(Number(await minutesStat.innerText())).toBeGreaterThan(0)
+
+    // История практик содержит только что отмеченную тренировку.
+    await expect(page.getByRole('heading', { name: 'Недавние практики' })).toBeVisible()
+    await expect(page.locator('.history-item').first()).toBeVisible()
+  })
+
+  test('Premium-карточка ведёт в locked, затем в paywall', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.catalog)
+
+    const premiumCard = page
+      .locator('.workout-card', { has: page.locator('.pill.premium') })
+      .first()
+    await expect(premiumCard).toBeVisible()
+    await premiumCard.click()
+
+    // Locked-экран: premium-контент закрыт, есть CTA в paywall.
+    await expect(page.getByRole('heading', { name: 'Откройте доступ, чтобы продолжить' })).toBeVisible()
+    const toPaywall = page.getByRole('button', { name: 'Открыть через Tribute' })
+    await expect(toPaywall).toBeVisible()
+    await toPaywall.click()
+
+    // Paywall: ценностное предложение Premium.
+    await expect(
+      page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: /Открыть за 500/ })).toBeVisible()
+  })
+
+  test('Paywall без VITE_TRIBUTE_LINK: мягкий toast, без внешнего перехода', async ({ page }) => {
+    await openApp(page)
+    // Прямой заход на paywall через левую навигацию.
+    await navTo(page, 'Paywall: ценность + Tribute')
+    await expect(
+      page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),
+    ).toBeVisible()
+
+    await page.getByRole('button', { name: /Открыть за 500/ }).click()
+    // Ссылка Tribute не задана → мягкая заглушка, остаёмся на paywall.
+    await expect(page.locator('.toast.show')).toContainText('Оплата скоро подключится')
+    await expect(
+      page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),
+    ).toBeVisible()
+  })
+
+  test('Онбординг (4 шага, инвентарь мультивыбор) фильтрует каталог', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.onboarding)
+
+    // Шаг 1/4: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
+    await expect(page.getByText('Шаг 1/4')).toBeVisible()
+    await page.locator('.option', { hasText: 'Шея и плечи зажаты' }).click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 2/4: время → «15–20 минут» (maxDuration 20).
+    await expect(page.getByText('Шаг 2/4')).toBeVisible()
+    await page.locator('.option', { hasText: '15–20 минут' }).click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 3/4: инвентарь — мультивыбор (можно отметить несколько).
+    // Матчим по заголовку опции (strong), а не по подстроке: описание
+    // «Без инвентаря» содержит слово «коврика» и ловилось бы вторым элементом.
+    await expect(page.getByText('Шаг 3/4')).toBeVisible()
+    const mat = page.locator('.option:has(strong:text-is("Коврик"))')
+    const band = page.locator('.option:has(strong:text-is("Резинка"))')
+    await mat.click()
+    await band.click()
+    await expect(mat).toHaveClass(/active/)
+    await expect(band).toHaveClass(/active/)
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 4/4: режим → финальная кнопка «Показать тренировки».
+    await expect(page.getByText('Шаг 4/4')).toBeVisible()
+    await page.locator('.option', { hasText: 'Очень мягко' }).click()
+    await page.getByRole('button', { name: 'Показать тренировки' }).click()
+
+    // Каталог отфильтрован под подбор: виден бейдж фильтра, тренировок меньше полного набора.
+    await expect(page.locator('.filter-note')).toContainText('Показан подбор под ваше состояние')
+    const cards = page.locator('.workout-card')
+    await expect(cards.first()).toBeVisible()
+    const filteredCount = await cards.count()
+    expect(filteredCount).toBeGreaterThan(0)
+    expect(filteredCount).toBeLessThan(13)
+
+    // Сброс фильтра возвращает полный каталог.
+    await page.locator('.filter-note button', { hasText: 'Сбросить' }).click()
+    await expect(page.locator('.filter-note')).toHaveCount(0)
+    expect(await cards.count()).toBeGreaterThan(filteredCount)
+  })
+
+  test('Профиль без premium: «Подписка не активна»', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.profile)
+
+    await expect(page.getByRole('heading', { name: 'Подписка через Tribute' })).toBeVisible()
+    // Бейдж статуса и поясняющий текст — доступ не оплачен.
+    await expect(page.locator('.program .badge', { hasText: 'Подписка не активна' })).toBeVisible()
+    await expect(page.getByText('Подписка не активна. Premium откроет')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Открыть Premium' })).toBeVisible()
+  })
+})

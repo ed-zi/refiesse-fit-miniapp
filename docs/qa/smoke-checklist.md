@@ -1,21 +1,44 @@
 # Smoke Checklist
 
-## Beta flow
+Бета-флоу Refiesse Fit. Часть пути закрыта автотестами Playwright
+(`apps/miniapp/e2e/beta-flow.spec.ts`), часть проверяется руками на реальных
+устройствах в Telegram. Автотесты гоняют фронт против **реального API + БД**;
+оплата/вебхуки Tribute в E2E не воспроизводятся (это интеграционные тесты API).
 
-- [ ] `/start` opens bot.
-- [ ] Mini App opens from bot.
-- [ ] Home loads.
-- [ ] User can open onboarding.
-- [ ] User can reach catalog.
-- [ ] User can open free workout.
-- [ ] Premium item shows locked/paywall state.
-- [ ] Progress screen opens.
-- [ ] Profile screen opens.
+## Автоматизировано (Playwright E2E)
 
-## Later Tribute flow
+Запуск локально: `npm run test:e2e -w apps/miniapp` (поднимает postgres → миграции
+→ seed → API → vite → браузер). В CI — отдельный job `E2E · Playwright` в
+`.github/workflows/ci.yml`.
 
-- [ ] Paywall opens Tribute link.
-- [ ] Webhook is received.
-- [ ] Access unlocks.
-- [ ] Duplicate webhook is safe.
-- [ ] Cancelled subscription behaves correctly.
+- [x] Home загружается из API без ошибок консоли (категории, «Тренировка дня»).
+- [x] Каталог показывает тренировки из БД (>3, есть и free, и premium).
+- [x] Free-тренировка → «Я сделала» → toast «Записано» → прогресс ≥1 тренировка и минуты.
+- [x] Premium-карточка → Locked → Paywall.
+- [x] Paywall без `VITE_TRIBUTE_LINK` → мягкий toast «Оплата скоро подключится», без внешнего перехода.
+- [x] Онбординг (4 шага, инвентарь — мультивыбор) → каталог отфильтрован под подбор → сброс возвращает полный каталог.
+- [x] Профиль без premium показывает «Подписка не активна».
+
+## Проверять руками (Telegram iOS / Android)
+
+Автотесты гоняются в обычном Chromium вне Telegram — поэтому нативную оболочку
+и платёжный контур проверяем на устройствах вручную.
+
+- [ ] `/start` открывает бота, кнопка запускает Mini App.
+- [ ] Mini App открывается внутри Telegram (iOS и Android), тема/viewport подхватываются (`--tg-theme-*`, safe-area снизу под нижней навигацией).
+- [ ] Авторизация проходит на реальном `initData` (без `VITE_DEV_INIT_DATA`): Home грузится, профиль показывает «Telegram ID связан».
+- [ ] Видео тренировки открывается внешней ссылкой через Telegram (`openLink` / `openTelegramLink`), не ломает Mini App.
+- [ ] Избранное (♥/♡) добавляется и убирается, состояние сохраняется между сессиями.
+- [ ] «Изменить подбор» из профиля открывает онбординг с сохранёнными ответами.
+
+### Платёжный контур Tribute (ручной, на staging с реальным ключом)
+
+E2E его не покрывает намеренно. Проверять после подключения `VITE_TRIBUTE_LINK`
+и `TRIBUTE_API_KEY`:
+
+- [ ] Paywall открывает ссылку Tribute во внешнем окне.
+- [ ] После оплаты возврат в Mini App → поллинг доступа по фокусу → экран Success.
+- [ ] «Я уже оплатила» вручную перепроверяет доступ.
+- [ ] Webhook получен, доступ разблокирован (premium-контент открылся).
+- [ ] Повторный (дублирующий) webhook безопасен — доступ не ломается.
+- [ ] Отменённая подписка: профиль показывает «Продление отключено, доступ до …».
