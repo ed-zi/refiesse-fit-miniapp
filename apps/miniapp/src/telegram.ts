@@ -14,6 +14,8 @@ import {
   isTMA,
   mountThemeParamsSync,
   mountViewport,
+  openLink,
+  openTelegramLink,
   retrieveRawInitData,
 } from '@telegram-apps/sdk-react'
 
@@ -81,4 +83,27 @@ export function getInitDataRaw(): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * Открывает внешнюю ссылку (например, оплату Tribute).
+ * Внутри Telegram — через SDK (openTelegramLink для t.me, иначе openLink),
+ * в обычном браузере — window.open. Ошибки SDK не роняют приложение.
+ */
+export function openExternalLink(url: string): void {
+  if (isTelegramEnv()) {
+    try {
+      if (/^https:\/\/t\.me\//i.test(url) && openTelegramLink.isAvailable()) {
+        openTelegramLink(url)
+        return
+      }
+      if (openLink.isAvailable()) {
+        openLink(url)
+        return
+      }
+    } catch (error) {
+      console.warn('[telegram] не удалось открыть ссылку через SDK', error)
+    }
+  }
+  window.open(url, '_blank', 'noopener')
 }

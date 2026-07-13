@@ -4,6 +4,7 @@ import {
   type SetStateAction,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import type {
@@ -15,7 +16,8 @@ import type {
   Workout,
   WorkoutLevel,
 } from '@refiesse-fit/shared'
-import { apiClient } from './api/client'
+import { apiClient, isHttpMode } from './api/client'
+import { openExternalLink } from './telegram'
 import {
   NO_EQUIPMENT,
   type OnboardingStepDef,
@@ -80,6 +82,14 @@ const levelFactLabels: Record<WorkoutLevel, string> = {
 function equipmentLabel(workout: Workout): string {
   return workout.equipment.length > 0 ? workout.equipment.join(', ') : 'без инвентаря'
 }
+
+/** Закрыт ли контент: сервер знает лучше (isLocked), иначе — по isPremium. */
+function isWorkoutLocked(workout: Workout): boolean {
+  return workout.isLocked ?? workout.isPremium
+}
+
+/** Ссылка на оплату Tribute; пусто — оплата ещё не подключена. */
+const tributeLink = String(import.meta.env.VITE_TRIBUTE_LINK ?? '').trim()
 
 const dayMonthFormat = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
@@ -158,12 +168,22 @@ function App() {
     [screen],
   )
 
-  function go(next: Screen) {
+  /** Прямая навигация без проверок (для внутренних переходов). */
+  function goUnchecked(next: Screen) {
     if (next === 'onboarding') {
       setOnboardingStep(0)
     }
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function go(next: Screen) {
+    // Success показывается только при активном premium (в HTTP-режиме);
+    // прямой заход без доступа мягко уводит на paywall.
+    if (next === 'success' && isHttpMode && data && !data.me.access.isPremium) {
+      next = 'paywall'
+    }
+    goUnchecked(next)
   }
 
   function retryLoad() {
@@ -177,10 +197,113 @@ function App() {
     window.setTimeout(() => setToast(''), 1300)
   }
 
+  /**
+   * Refetch GET /access. Если premium открылся — Success, обновление me.access
+   * и refetch каталога/тренировки дня (premium-контент разблокировался).
+   * manual — клик «Я уже оплатила»: даёт обратную связь и при отсутствии доступа.
+   */
+  function refreshAccess(options?: { manual?: boolean }) {
+    if (!data) {
+      return
+    }
+    const wasPremium = data.me.access.isPremium
+    if (wasPremium && !options?.manual) {
+      // Авто-поллинг не нужен: доступ уже открыт.
+      return
+    }
+    void apiClient
+      .getAccess()
+      .then((access) => {
+        setData((current) =>
+          current ? { ...current, me: { ...current.me, access } } : current,
+        )
+        if (access.isPremium) {
+          if (!wasPremium || options?.manual) {
+            goUnchecked('success')
+          }
+          if (!wasPremium) {
+            // Замки поменялись: сбрасываем кэш детальной и обновляем списки.
+            setWorkoutDetail(null)
+            void Promise.all([
+              apiClient.getCatalog(
+                data.catalogFiltered && data.me.onboarding
+                  ? onboardingToCatalogQuery(data.me.onboarding)
+                  : undefined,
+              ),
+              apiClient.getWorkoutOfDay(),
+            ])
+              .then(([catalog, workoutOfDay]) => {
+                setData((current) =>
+                  current
+                    ? {
+                        ...current,
+                        categories: catalog.categories,
+                        workouts: catalog.workouts,
+                        workoutOfDay,
+                      }
+                    : current,
+                )
+              })
+              .catch(() => {
+                // Каталог обновится при следующей загрузке; доступ уже проставлен.
+              })
+          }
+        } else if (options?.manual) {
+          showToast('Оплата пока не подтвердилась. Попробуйте чуть позже')
+        }
+      })
+      .catch(() => {
+        if (options?.manual) {
+          showToast('Не получилось проверить доступ')
+        }
+      })
+  }
+
+  // Всегда свежая ссылка на refreshAccess для подписок на события окна.
+  const refreshAccessRef = useRef<(options?: { manual?: boolean }) => void>(() => {})
+  useEffect(() => {
+    refreshAccessRef.current = refreshAccess
+  })
+
+  // Поллинг доступа при возврате в приложение (после оплаты в Tribute).
+  useEffect(() => {
+    if (!isHttpMode) {
+      return
+    }
+    const onFocus = () => refreshAccessRef.current()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAccessRef.current()
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  /** CTA paywall'а: уход на оплату Tribute (или мягкая заглушка/mock-переход). */
+  function startPayment() {
+    if (!isHttpMode) {
+      // Mock-прототип: демонстрационный переход на Success, как раньше.
+      go('success')
+      return
+    }
+    if (!tributeLink) {
+      showToast('Оплата скоро подключится')
+      return
+    }
+    openExternalLink(tributeLink)
+    // Подстраховка к поллингу по фокусу: одна отложенная проверка доступа.
+    window.setTimeout(() => refreshAccessRef.current(), 8000)
+  }
+
   /** Открывает карточку тренировки: закрытый контент ведёт на Locked. */
   function openWorkout(workout: Workout) {
     setSelectedWorkoutSlug(workout.slug)
-    const locked = workout.isLocked ?? workout.isPremium
+    const locked = isWorkoutLocked(workout)
     go(locked ? 'locked' : 'workout')
     if (!locked && workoutDetail?.slug !== workout.slug) {
       // Полная карточка (в HTTP-режиме список каталога приходит без videoUrl).
@@ -288,11 +411,13 @@ function App() {
     data?.workouts.find((workout) => workout.slug === selectedWorkoutSlug) ?? null
   const workoutForDetail =
     (workoutDetail && workoutDetail.slug === selectedWorkoutSlug ? workoutDetail : null) ??
-    (selectedWorkout && !selectedWorkout.isPremium ? selectedWorkout : null) ??
-    data?.workouts.find((workout) => !workout.isPremium) ??
+    (selectedWorkout && !isWorkoutLocked(selectedWorkout) ? selectedWorkout : null) ??
+    data?.workouts.find((workout) => !isWorkoutLocked(workout)) ??
     null
   const workoutForLocked =
-    (selectedWorkout?.isPremium ? selectedWorkout : null) ??
+    (selectedWorkout && isWorkoutLocked(selectedWorkout) ? selectedWorkout : null) ??
+    data?.workouts.find((workout) => isWorkoutLocked(workout)) ??
+    // При открытом доступе замков нет — для демо-экрана Locked берём любой premium.
     data?.workouts.find((workout) => workout.isPremium) ??
     null
 
@@ -363,7 +488,13 @@ function App() {
               {screen === 'locked' && workoutForLocked && (
                 <LockedScreen go={go} workout={workoutForLocked} />
               )}
-              {screen === 'paywall' && <PaywallScreen go={go} />}
+              {screen === 'paywall' && (
+                <PaywallScreen
+                  go={go}
+                  onAlreadyPaid={() => refreshAccess({ manual: true })}
+                  onPay={startPayment}
+                />
+              )}
               {screen === 'success' && <SuccessScreen data={data} go={go} />}
               {screen === 'progress' && (
                 <ProgressScreen
@@ -487,7 +618,7 @@ function HomeScreen({
         <div className="badge">
           {data.me.access.isPremium && accessUntil
             ? `Доступ открыт до ${accessUntil}`
-            : 'Бесплатный доступ'}
+            : 'Мягкая система движения'}
         </div>
         <h2>Что нужно телу сегодня?</h2>
         <p>
@@ -875,7 +1006,15 @@ function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: 
   )
 }
 
-function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
+function PaywallScreen({
+  go,
+  onAlreadyPaid,
+  onPay,
+}: {
+  go: (screen: Screen) => void
+  onAlreadyPaid: () => void
+  onPay: () => void
+}) {
   return (
     <section className="screen">
       <TopBar onBack={() => go('catalog')} right="✧" />
@@ -896,8 +1035,11 @@ function PaywallScreen({ go }: { go: (screen: Screen) => void }) {
         </div>
         <div>
           <p className="price-note">500 ₽ в месяц. Продление и отмена — в Tribute.</p>
-          <button className="cta full" onClick={() => go('success')} type="button">
+          <button className="cta full" onClick={onPay} type="button">
             Открыть за 500 ₽/мес
+          </button>
+          <button className="cta ghost full stacked" onClick={onAlreadyPaid} type="button">
+            Я уже оплатила
           </button>
           <button className="cta secondary full stacked" onClick={() => go('catalog')} type="button">
             Продолжить бесплатно
@@ -912,13 +1054,16 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
   const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
   const { done, total } = data.progress.summary.planProgress
   const todayDay = plan?.days[done] ?? null
+  const accessUntil = formatDayMonth(data.me.access.expiresAt)
 
   return (
     <section className="screen">
       <TopBar title="Доступ" right="✓" />
       <div className="success">
         <div className="success-icon">✓</div>
-        <h2 className="compact-title">Доступ открыт</h2>
+        <h2 className="compact-title">
+          {accessUntil ? `Доступ открыт до ${accessUntil}` : 'Доступ открыт'}
+        </h2>
         <p className="lead">
           Premium-планы и тренировки уже доступны. Начните с мягкого маршрута на
           7 дней.
@@ -998,7 +1143,20 @@ function ProfileScreen({
   me: UserProfile
   onEditOnboarding: () => void
 }) {
-  const accessUntil = formatDayMonth(me.access.expiresAt)
+  const access = me.access
+  const accessUntil = formatDayMonth(access.expiresAt)
+  let subscriptionText: string
+  if (access.isPremium && access.status === 'cancelled') {
+    subscriptionText = accessUntil
+      ? `Продление отключено, доступ до ${accessUntil}.`
+      : 'Продление отключено, доступ действует до конца оплаченного периода.'
+  } else if (access.isPremium) {
+    subscriptionText = accessUntil
+      ? `Доступ открыт до ${accessUntil}. Продление управляется в Tribute.`
+      : 'Доступ открыт. Продление управляется в Tribute.'
+  } else {
+    subscriptionText = 'Подписка не активна. Premium откроет планы, каталог и прогресс.'
+  }
 
   return (
     <section className="screen">
@@ -1011,17 +1169,19 @@ function ProfileScreen({
       </div>
       <div className="program">
         <div className="badge">
-          {me.access.isPremium ? 'Premium активен' : 'Бесплатный доступ'}
+          {access.isPremium ? 'Premium активен' : 'Подписка не активна'}
         </div>
         <h3>Подписка через Tribute</h3>
-        <p className="lead profile-lead">
-          {me.access.isPremium && accessUntil
-            ? `Доступ открыт до ${accessUntil}. Продление управляется в Tribute.`
-            : 'Premium откроет планы, каталог и прогресс. Оплата — через Tribute.'}
-        </p>
-        <button className="cta lime full" type="button">
-          Управлять подпиской
-        </button>
+        <p className="lead profile-lead">{subscriptionText}</p>
+        {access.isPremium ? (
+          <button className="cta lime full" type="button">
+            Управлять подпиской
+          </button>
+        ) : (
+          <button className="cta lime full" onClick={() => go('paywall')} type="button">
+            Открыть Premium
+          </button>
+        )}
       </div>
       <button className="cta secondary full" onClick={onEditOnboarding} type="button">
         Изменить подбор

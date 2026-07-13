@@ -8,6 +8,7 @@
 //     initData → POST /auth/telegram → Bearer JWT в памяти → повтор на 401.
 
 import type {
+  AccessStatus,
   ApiErrorResponse,
   AuthSession,
   Category,
@@ -46,6 +47,8 @@ export interface ApiClient {
   getPlans(): Promise<Program[]>
   getProgress(): Promise<ProgressOverview>
   getMe(): Promise<UserProfile>
+  /** Актуальный статус доступа (поллится после ухода на оплату Tribute). */
+  getAccess(): Promise<AccessStatus>
   saveOnboarding(answers: OnboardingAnswers): Promise<OnboardingAnswers>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
   markDone(workoutSlug: string): Promise<ProgressSummary>
@@ -117,6 +120,7 @@ function createMockApiClient(): ApiClient {
         entries: [...entries],
       }),
     getMe: () => Promise.resolve({ ...mockUser, onboarding }),
+    getAccess: () => Promise.resolve({ ...mockUser.access }),
     saveOnboarding: (answers) => {
       onboarding = {
         ...answers,
@@ -312,6 +316,7 @@ function createHttpApiClient(baseUrl: string): ApiClient {
     },
     getProgress: () => request<ProgressOverview>('/progress'),
     getMe: () => request<UserProfile>('/me'),
+    getAccess: () => request<AccessStatus>('/access'),
     saveOnboarding: async (answers) => {
       const { onboarding } = await request<{ onboarding: OnboardingAnswers }>('/me/onboarding', {
         method: 'PUT',
@@ -344,7 +349,10 @@ function createHttpApiClient(baseUrl: string): ApiClient {
 
 const apiBaseUrl = String(import.meta.env.VITE_API_URL ?? '').trim()
 
+/** true — работаем против реального API (VITE_API_URL задан). */
+export const isHttpMode = apiBaseUrl !== ''
+
 /** Активный клиент данных приложения. */
-export const apiClient: ApiClient = apiBaseUrl
+export const apiClient: ApiClient = isHttpMode
   ? createHttpApiClient(apiBaseUrl)
   : mockApiClient
