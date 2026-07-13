@@ -45,7 +45,10 @@ export function registerTributeRoutes(app: FastifyInstance): void {
       done(null, body);
     });
 
-    scope.post('/api/tribute/webhook', async (request): Promise<WebhookResult> => {
+    scope.post('/api/tribute/webhook', {
+      // Tribute ретраит события; лимит щадящий, но конечный (S3-5).
+      config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+    }, async (request): Promise<WebhookResult> => {
       const apiKey = app.config.tributeApiKey;
       if (apiKey === undefined) {
         throw new AppError(503, 'TRIBUTE_DISABLED', 'TRIBUTE_API_KEY is not configured');

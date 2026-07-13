@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { loadConfig, type AppConfig } from './config.ts';
@@ -50,6 +51,20 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
     origin: config.corsOrigin ?? true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
+  if (config.nodeEnv === 'production' && config.corsOrigin === undefined) {
+    app.log.warn('CORS_ORIGIN is not set in production — all origins are allowed');
+  }
+
+  // Rate limit (S3-5 security review): глобальный потолок + жёсткие лимиты
+  // на auth/webhook/admin через route config. В тестах выключен (app.inject
+  // шлёт всё с одного адреса и ложно упирался бы в лимит).
+  if (config.nodeEnv !== 'test') {
+    await app.register(rateLimit, {
+      global: true,
+      max: 300,
+      timeWindow: '1 minute',
+    });
+  }
 
   await app.register(fastifyJwt, {
     secret: config.jwtSecret,

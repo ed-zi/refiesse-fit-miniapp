@@ -63,6 +63,22 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new ConfigError(`Invalid environment configuration:\n${details}`);
   }
   const e = parsed.data;
+  // В production слабые секреты недопустимы (S3-5 security review):
+  // короткий JWT_SECRET уязвим к офлайн-подбору HS256, короткий ADMIN_TOKEN — к перебору.
+  if (e.NODE_ENV === 'production') {
+    const weak: string[] = [];
+    if (e.JWT_SECRET.length < 32) {
+      weak.push('JWT_SECRET must be at least 32 characters in production');
+    }
+    if (e.ADMIN_TOKEN !== undefined && e.ADMIN_TOKEN.length < 32) {
+      weak.push('ADMIN_TOKEN must be at least 32 characters in production');
+    }
+    if (weak.length > 0) {
+      throw new ConfigError(
+        `Invalid environment configuration:\n${weak.map((m) => `  - ${m}`).join('\n')}`,
+      );
+    }
+  }
   return {
     databaseUrl: e.DATABASE_URL,
     botToken: e.BOT_TOKEN,

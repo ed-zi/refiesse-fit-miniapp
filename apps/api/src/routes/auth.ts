@@ -14,7 +14,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
    * Верификация подписи по BOT_TOKEN → идемпотентный upsert User по
    * telegramUserId → JWT (~1ч) с payload { userId }.
    */
-  app.post('/auth/telegram', async (request): Promise<AuthResponse> => {
+  app.post('/auth/telegram', {
+    // HMAC + upsert в БД на каждый вызов — лимит жёстче глобального (S3-5).
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, async (request): Promise<AuthResponse> => {
     const body = authBodySchema.parse(request.body ?? {});
 
     let verified;

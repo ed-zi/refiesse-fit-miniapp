@@ -93,11 +93,12 @@ export function verifyInitData(
     throw new InitDataError('HASH_MISSING', 'initData has no hash field');
   }
 
-  // data_check_string: все пары кроме hash, отсортированные по ключу.
+  // data_check_string: все пары кроме hash, отсортированные строго по ключу
+  // (спецификация Telegram; сортировка по строке "key=value" хрупка к новым полям).
   const dataCheckString = [...params.entries()]
     .filter(([key]) => key !== 'hash')
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
-    .sort()
     .join('\n');
 
   const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
