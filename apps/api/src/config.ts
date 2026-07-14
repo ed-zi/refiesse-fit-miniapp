@@ -40,6 +40,22 @@ const envSchema = z.object({
    * Dev/test работают без Sentry и не требуют этой переменной.
    */
   SENTRY_DSN: z.string().min(1).optional(),
+  /**
+   * ЮKassa (P1). shopId + secretKey — из личного кабинета (Настройки → API-ключ).
+   * Не заданы (любой из двух) → /api/payments/* отвечают 503 PAYMENTS_DISABLED.
+   */
+  YOOKASSA_SHOP_ID: z.string().min(1).optional(),
+  YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+  /** return_url — куда ЮKassa вернёт пользователя после оплаты (Mini App). */
+  YOOKASSA_RETURN_URL: z.string().min(1).optional(),
+  /**
+   * Включает автосписания (recurring) по расписанию. Default false — в MVP
+   * стартуем с ручного продления, код автосписания заложен за флагом.
+   */
+  BILLING_AUTOCHARGE_ENABLED: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .default(false),
 });
 
 export interface AppConfig {
@@ -55,6 +71,11 @@ export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   /** Опционально: отсутствие поля/undefined → Sentry выключен (S4-2). */
   sentryDsn?: string | undefined;
+  /** ЮKassa (P1): не заданы shopId/secretKey → /api/payments/* → 503. */
+  yookassaShopId: string | undefined;
+  yookassaSecretKey: string | undefined;
+  yookassaReturnUrl: string | undefined;
+  billingAutochargeEnabled: boolean;
 }
 
 export class ConfigError extends Error {
@@ -99,5 +120,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     port: e.PORT,
     nodeEnv: e.NODE_ENV,
     sentryDsn: e.SENTRY_DSN,
+    yookassaShopId: e.YOOKASSA_SHOP_ID,
+    yookassaSecretKey: e.YOOKASSA_SECRET_KEY,
+    yookassaReturnUrl: e.YOOKASSA_RETURN_URL,
+    billingAutochargeEnabled: e.BILLING_AUTOCHARGE_ENABLED,
   };
 }

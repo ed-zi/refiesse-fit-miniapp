@@ -203,6 +203,9 @@ model Subscription {
   status                SubscriptionStatus @default(expired)
   expiresAt             DateTime?          @map("expires_at")
   tributeSubscriptionId String?            @map("tribute_subscription_id")
+  // Провайдер оплаты и сохранённый способ оплаты (ЮKassa recurring, P1).
+  provider              PaymentProvider?
+  paymentMethodId       String?            @map("payment_method_id")
   startedAt             DateTime?          @map("started_at")
   cancelledAt           DateTime?          @map("cancelled_at")
   createdAt             DateTime           @default(now()) @map("created_at")
@@ -215,9 +218,38 @@ model Subscription {
   @@map("subscriptions")
 }
 
+// Провайдер платежей. Tribute — legacy (deprecated), ЮKassa — актуальный (P1).
+enum PaymentProvider {
+  tribute
+  yookassa
+}
+
+// Обобщённый лог событий оплаты (P1): идемпотентность и разбор инцидентов
+// для любого провайдера. Пришёл на смену TributeEvent (тот оставлен deprecated).
+// Связь с пользователем — по telegramUserId (User может ещё не существовать).
+model PaymentEvent {
+  id             String          @id @default(cuid())
+  provider       PaymentProvider
+  // Идемпотентный ключ провайдера: для ЮKassa — id объекта платежа.
+  eventId        String          @map("event_id")
+  // Тип события провайдера, напр. 'payment.succeeded'.
+  eventType      String          @map("event_type")
+  telegramUserId BigInt?         @map("telegram_user_id")
+  payload        Json
+  processedAt    DateTime?       @map("processed_at") // null = принято, но доступ не открыт
+  error          String?         // причина, если применение не удалось / статус не succeeded
+  receivedAt     DateTime        @default(now()) @map("received_at")
+
+  @@unique([provider, eventId])
+  @@index([telegramUserId])
+  @@index([provider, eventType])
+  @@map("payment_events")
+}
+
+// DEPRECATED (P1): Tribute убран как провайдер продаж; таблица и роут
+// /api/tribute/webhook сохранены до подтверждения рабочего ЮKassa-контура.
+// Новые события пишутся в PaymentEvent. Не удалять до e2e-проверки ЮKassa.
 // Лог событий Tribute для идемпотентности и разбора инцидентов.
-// Связь с пользователем — по telegramUserId (User может ещё не существовать
-// на момент приёма события).
 model TributeEvent {
   id             String           @id @default(cuid())
   eventId        String           @unique @map("event_id") // idempotency key от Tribute

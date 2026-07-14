@@ -17,6 +17,7 @@ import { registerAuthRoutes } from './routes/auth.ts';
 import { registerCatalogRoutes } from './routes/catalog.ts';
 import { registerFavoriteRoutes } from './routes/favorites.ts';
 import { registerMeRoutes } from './routes/me.ts';
+import { registerPaymentRoutes } from './routes/payments.ts';
 import { registerPlanRoutes } from './routes/plans.ts';
 import { registerProgressRoutes } from './routes/progress.ts';
 import { registerTributeRoutes } from './routes/tribute.ts';
@@ -36,11 +37,27 @@ declare module '@fastify/jwt' {
   }
 }
 
+export interface BuildAppOptions {
+  /**
+   * Инъекция fetch для клиента ЮKassa (тесты подменяют HTTP без реальных
+   * вызовов к api.yookassa.ru). В проде не задаётся — используется глобальный fetch.
+   */
+  yookassaFetch?: typeof fetch;
+  /**
+   * Инъекция готового клиента ЮKassa (тесты подменяют весь HTTP-слой).
+   * null → интеграция считается не настроенной (503).
+   */
+  yookassaClientFactory?: () => import('./yookassa/client.ts').YookassaApi | null;
+}
+
 /**
  * Собирает Fastify-приложение без listen — для тестов через app.inject()
  * и для запуска в server.ts.
  */
-export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
+export async function buildApp(
+  config: AppConfig = loadConfig(),
+  options: BuildAppOptions = {},
+): Promise<FastifyInstance> {
   const app = Fastify({
     logger: config.nodeEnv !== 'test',
   });
@@ -154,6 +171,11 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   registerAdminUserRoutes(app);
   registerAdminTributeRoutes(app);
   registerAdminUiRoutes(app);
+  registerPaymentRoutes(app, {
+    ...(options.yookassaFetch ? { yookassaFetch: options.yookassaFetch } : {}),
+    ...(options.yookassaClientFactory ? { clientFactory: options.yookassaClientFactory } : {}),
+  });
+  // DEPRECATED (P1): Tribute-роут сохранён рабочим до e2e-проверки ЮKassa.
   registerTributeRoutes(app);
 
   return app;

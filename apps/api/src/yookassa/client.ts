@@ -1,0 +1,180 @@
+/**
+ * Тонкий клиент к API ЮKassa на встроенном fetch (без SDK-зависимостей, P1).
+ *
+ * Docs: https://yookassa.ru/developers/api
+ * Аутентификация — HTTP Basic: shopId:secretKey.
+ * Idempotence-Key — обязателен для POST (защита от двойного создания платежа).
+ *
+ * fetchImpl инъектируется (тесты подменяют HTTP без реальных вызовов к
+ * api.yookassa.ru); baseUrl тоже переопределяем.
+ */
+
+const DEFAULT_BASE_URL = 'https://api.yookassa.ru/v3';
+const CURRENCY = 'RUB';
+
+/** Статусы платежа ЮKassa. */
+export type YookassaPaymentStatus =
+  | 'pending'
+  | 'waiting_for_capture'
+  | 'succeeded'
+  | 'canceled';
+
+/** Нормализованный платёж, возвращаемый клиентом. */
+export interface YookassaPayment {
+  id: string;
+  status: YookassaPaymentStatus;
+  paid: boolean;
+  /** URL платёжной страницы (для confirmation.type = redirect). */
+  confirmationUrl: string | null;
+  /** Сохранённый способ оплаты (при save_payment_method и успехе). */
+  paymentMethodId: string | null;
+  /** Признак, что способ можно использовать для recurring. */
+  paymentMethodSaved: boolean;
+  /** metadata, которую мы передали при создании (эхо от ЮKassa). */
+  metadata: Record<string, unknown>;
+}
+
+export interface CreatePaymentParams {
+  amountRub: number;
+  description: string;
+  telegramUserId: number | string;
+  savePaymentMethod: boolean;
+  returnUrl: string;
+  idempotenceKey: string;
+}
+
+export interface CreateRecurringParams {
+  amountRub: number;
+  paymentMethodId: string;
+  telegramUserId: number | string;
+  description?: string;
+  idempotenceKey: string;
+}
+
+export interface YookassaApi {
+  createPayment(params: CreatePaymentParams): Promise<YookassaPayment>;
+  getPayment(id: string): Promise<YookassaPayment>;
+  createRecurring(params: CreateRecurringParams): Promise<YookassaPayment>;
+}
+
+export interface YookassaClientOptions {
+  shopId: string;
+  secretKey: string;
+  baseUrl?: string;
+  fetchImpl?: typeof fetch;
+}
+
+export class YookassaError extends Error {
+  override name = 'YookassaError';
+  readonly statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+/** Рубли (число) → строка суммы ЮKassa: "500.00". */
+function toAmountValue(amountRub: number): string {
+  return amountRub.toFixed(2);
+}
+
+/** Сырой объект платежа ЮKassa → нормализованный YookassaPayment. */
+function normalizePayment(raw: unknown): YookassaPayment {
+  const obj = (raw ?? {}) as Record<string, unknown>;
+  const confirmation = (obj['confirmation'] ?? {}) as Record<string, unknown>;
+  const paymentMethod = (obj['payment_method'] ?? {}) as Record<string, unknown>;
+  const metadata = (obj['metadata'] ?? {}) as Record<string, unknown>;
+
+  return {
+    id: String(obj['id'] ?? ''),
+    status: (obj['status'] as YookassaPaymentStatus) ?? 'pending',
+    paid: obj['paid'] === true,
+    confirmationUrl:
+      typeof confirmation['confirmation_url'] === 'string'
+        ? confirmation['confirmation_url']
+        : null,
+    paymentMethodId:
+      typeof paymentMethod['id'] === 'string' ? paymentMethod['id'] : null,
+    paymentMethodSaved: paymentMethod['saved'] === true,
+    metadata,
+  };
+}
+
+export class YookassaHttpClient implements YookassaApi {
+  private readonly baseUrl: string;
+  private readonly authHeader: string;
+  private readonly fetchImpl: typeof fetch;
+
+  constructor(options: YookassaClientOptions) {
+    this.baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+    this.authHeader =
+      'Basic ' + Buffer.from(`${options.shopId}:${options.secretKey}`).toString('base64');
+    this.fetchImpl = options.fetchImpl ?? fetch;
+  }
+
+  private async request(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    idempotenceKey?: string,
+  ): Promise<unknown> {
+    const headers: Record<string, string> = {
+      Authorization: this.authHeader,
+      Accept: 'application/json',
+    };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (idempotenceKey !== undefined) {
+      headers['Idempotence-Key'] = idempotenceKey;
+    }
+
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+    let json: unknown = null;
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+    if (!response.ok) {
+      const description =
+        (json as { description?: unknown } | null)?.description ??
+        `YooKassa request failed (${response.status})`;
+      throw new YookassaError(response.status, String(description));
+    }
+    return json;
+  }
+
+  async createPayment(params: CreatePaymentParams): Promise<YookassaPayment> {
+    const body = {
+      amount: { value: toAmountValue(params.amountRub), currency: CURRENCY },
+      capture: true,
+      confirmation: { type: 'redirect', return_url: params.returnUrl },
+      description: params.description,
+      save_payment_method: params.savePaymentMethod,
+      metadata: { telegram_user_id: String(params.telegramUserId) },
+    };
+    return normalizePayment(await this.request('POST', '/payments', body, params.idempotenceKey));
+  }
+
+  async getPayment(id: string): Promise<YookassaPayment> {
+    return normalizePayment(await this.request('GET', `/payments/${encodeURIComponent(id)}`));
+  }
+
+  async createRecurring(params: CreateRecurringParams): Promise<YookassaPayment> {
+    const body = {
+      amount: { value: toAmountValue(params.amountRub), currency: CURRENCY },
+      capture: true,
+      payment_method_id: params.paymentMethodId,
+      description: params.description ?? 'Refiesse Fit — продление подписки',
+      metadata: { telegram_user_id: String(params.telegramUserId) },
+    };
+    return normalizePayment(await this.request('POST', '/payments', body, params.idempotenceKey));
+  }
+}

@@ -8,6 +8,11 @@ import type { Prisma } from '../generated/prisma/client.ts';
 /**
  * POST /api/tribute/webhook (S3-2).
  *
+ * DEPRECATED (P1): Tribute больше не источник продаж — перешли на ЮKassa
+ * (routes/payments.ts). Роут сохранён рабочим до e2e-подтверждения ЮKassa;
+ * не удалять до этого. Новые события пишутся в PaymentEvent, Tribute — в
+ * TributeEvent (legacy). Общая логика открытия доступа — billing/subscription.ts.
+ *
  * Внешний вызов от Tribute: БЕЗ JWT, аутентификация — подпись trbt-signature
  * (HMAC-SHA256 от сырого тела, ключ TRIBUTE_API_KEY, см. tribute/verifySignature.ts).
  *

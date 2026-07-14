@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { activateSubscription } from '../billing/subscription.ts';
 import type { PrismaClient } from '../generated/prisma/client.ts';
 
 /**
@@ -91,26 +92,21 @@ export async function applyTributeEvent(
     return { status: 'ok' };
   }
 
-  // new_subscription / renewed_subscription: активируем до payload.expires_at.
+  // new_subscription / renewed_subscription: активируем до payload.expires_at
+  // через общую логику открытия доступа (billing/subscription.ts).
   const expiresAt = parseExpiresAt(event.payload.expires_at);
   if (expiresAt === null) {
     return { status: 'ignored', error: 'MISSING_OR_INVALID_EXPIRES_AT' };
   }
-  await prisma.subscription.upsert({
-    where: { userId: user.id },
-    create: {
-      userId: user.id,
-      status: 'active',
+  await activateSubscription(
+    prisma,
+    user.id,
+    {
       expiresAt,
-      startedAt: now,
-      tributeSubscriptionId: tributeSubscriptionId ?? null,
-    },
-    update: {
-      status: 'active',
-      expiresAt,
-      cancelledAt: null,
+      provider: 'tribute',
       ...(tributeSubscriptionId !== undefined ? { tributeSubscriptionId } : {}),
     },
-  });
+    now,
+  );
   return { status: 'ok' };
 }

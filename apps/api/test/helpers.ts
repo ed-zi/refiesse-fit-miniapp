@@ -10,6 +10,11 @@ export const TEST_TRIBUTE_API_KEY = 'test-tribute-api-key';
 
 export const TEST_ADMIN_TOKEN = 'test-admin-token';
 
+/** Фейковые ЮKassa-ключи — включают /api/payments/* в тестах. */
+export const TEST_YOOKASSA_SHOP_ID = 'test-shop-id';
+export const TEST_YOOKASSA_SECRET_KEY = 'test-secret-key';
+export const TEST_YOOKASSA_RETURN_URL = 'https://miniapp.test/return';
+
 export const testConfig: AppConfig = {
   databaseUrl: TEST_DATABASE_URL,
   botToken: TEST_BOT_TOKEN,
@@ -21,6 +26,10 @@ export const testConfig: AppConfig = {
   adminToken: TEST_ADMIN_TOKEN,
   port: 0,
   nodeEnv: 'test',
+  yookassaShopId: TEST_YOOKASSA_SHOP_ID,
+  yookassaSecretKey: TEST_YOOKASSA_SECRET_KEY,
+  yookassaReturnUrl: TEST_YOOKASSA_RETURN_URL,
+  billingAutochargeEnabled: false,
 };
 
 export interface BuildInitDataOptions {
