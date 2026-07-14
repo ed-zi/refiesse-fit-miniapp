@@ -47,13 +47,15 @@ export interface ApiClient {
   getPlans(): Promise<Program[]>
   getProgress(): Promise<ProgressOverview>
   getMe(): Promise<UserProfile>
-  /** Актуальный статус доступа (поллится после ухода на оплату Tribute). */
+  /** Актуальный статус доступа (поллится после ухода на страницу оплаты). */
   getAccess(): Promise<AccessStatus>
   saveOnboarding(answers: OnboardingAnswers): Promise<OnboardingAnswers>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
   markDone(workoutSlug: string): Promise<ProgressSummary>
   toggleFavorite(workoutSlug: string): Promise<FavoriteToggleResult>
   getFavorites(): Promise<string[]>
+  /** Создаёт платёж провайдера (ЮKassa) и возвращает URL страницы оплаты. */
+  createPayment(): Promise<{ confirmationUrl: string }>
 }
 
 /** Ошибка API с машинным кодом (для UI-состояний и логики повторов). */
@@ -167,6 +169,10 @@ function createMockApiClient(): ApiClient {
       return Promise.resolve({ favorited, slugs: [...favorites] })
     },
     getFavorites: () => Promise.resolve([...favorites]),
+    createPayment: () =>
+      // В прототипе оплата «проходит» сразу: возвращаем фиктивный URL,
+      // App в mock-режиме имитирует немедленный доступ (paywall → success).
+      Promise.resolve({ confirmationUrl: 'https://example.test/mock-payment' }),
   }
 }
 
@@ -340,6 +346,8 @@ function createHttpApiClient(baseUrl: string): ApiClient {
       const { slugs } = await request<{ slugs: string[] }>('/favorites')
       return slugs
     },
+    createPayment: () =>
+      request<{ confirmationUrl: string }>('/api/payments/create', { method: 'POST' }),
   }
 }
 

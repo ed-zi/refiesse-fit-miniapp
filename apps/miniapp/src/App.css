@@ -213,6 +213,12 @@ p,
   cursor: pointer;
 }
 
+.cta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+  box-shadow: none;
+}
+
 .cta.full {
   width: 100%;
 }

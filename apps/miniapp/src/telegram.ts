@@ -86,7 +86,7 @@ export function getInitDataRaw(): string | null {
 }
 
 /**
- * Открывает внешнюю ссылку (например, оплату Tribute).
+ * Открывает внешнюю ссылку (например, страницу оплаты кассы).
  * Внутри Telegram — через SDK (openTelegramLink для t.me, иначе openLink),
  * в обычном браузере — window.open. Ошибки SDK не роняют приложение.
  */

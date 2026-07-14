@@ -48,7 +48,7 @@ const steps: Array<{ id: Screen; label: string }> = [
   { id: 'workout', label: 'Тренировка: понять и начать' },
   { id: 'plans', label: 'Планы: система на 5–7 дней' },
   { id: 'locked', label: 'Locked: premium закрыт' },
-  { id: 'paywall', label: 'Paywall: ценность + Tribute' },
+  { id: 'paywall', label: 'Paywall: ценность + оплата' },
   { id: 'success', label: 'Success: доступ открыт' },
   { id: 'progress', label: 'Прогресс: удержание без давления' },
   { id: 'profile', label: 'Профиль: подписка и настройки' },
@@ -88,8 +88,8 @@ function isWorkoutLocked(workout: Workout): boolean {
   return workout.isLocked ?? workout.isPremium
 }
 
-/** Ссылка на оплату Tribute; пусто — оплата ещё не подключена. */
-const tributeLink = String(import.meta.env.VITE_TRIBUTE_LINK ?? '').trim()
+/** Опциональная статичная ссылка-запаска; основной путь — createPayment(). */
+const paymentFallbackLink = String(import.meta.env.VITE_PAYMENT_FALLBACK_LINK ?? '').trim()
 
 const dayMonthFormat = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
@@ -116,6 +116,7 @@ function App() {
   const [reloadKey, setReloadKey] = useState(0)
   const [selectedWorkoutSlug, setSelectedWorkoutSlug] = useState<string | null>(null)
   const [workoutDetail, setWorkoutDetail] = useState<Workout | null>(null)
+  const [payPending, setPayPending] = useState(false)
 
   // Единая машина состояний загрузки: loading → error | ready (retry через reloadKey).
   useEffect(() => {
@@ -265,7 +266,7 @@ function App() {
     refreshAccessRef.current = refreshAccess
   })
 
-  // Поллинг доступа при возврате в приложение (после оплаты в Tribute).
+  // Поллинг доступа при возврате в приложение (после оплаты на странице кассы).
   useEffect(() => {
     if (!isHttpMode) {
       return
@@ -284,20 +285,36 @@ function App() {
     }
   }, [])
 
-  /** CTA paywall'а: уход на оплату Tribute (или мягкая заглушка/mock-переход). */
+  /** CTA paywall'а: создать платёж ЮKassa и уйти на страницу оплаты. */
   function startPayment() {
     if (!isHttpMode) {
       // Mock-прототип: демонстрационный переход на Success, как раньше.
       go('success')
       return
     }
-    if (!tributeLink) {
-      showToast('Оплата скоро подключится')
+    if (payPending) {
       return
     }
-    openExternalLink(tributeLink)
-    // Подстраховка к поллингу по фокусу: одна отложенная проверка доступа.
-    window.setTimeout(() => refreshAccessRef.current(), 8000)
+    setPayPending(true)
+    void apiClient
+      .createPayment()
+      .then(({ confirmationUrl }) => {
+        openExternalLink(confirmationUrl)
+        // Подстраховка к поллингу по фокусу: одна отложенная проверка доступа.
+        window.setTimeout(() => refreshAccessRef.current(), 8000)
+      })
+      .catch(() => {
+        // Касса не настроена (503 PAYMENTS_DISABLED) или сеть: пробуем запаску.
+        if (paymentFallbackLink) {
+          openExternalLink(paymentFallbackLink)
+          window.setTimeout(() => refreshAccessRef.current(), 8000)
+        } else {
+          showToast('Оплата скоро подключится')
+        }
+      })
+      .finally(() => {
+        setPayPending(false)
+      })
   }
 
   /** Открывает карточку тренировки: закрытый контент ведёт на Locked. */
@@ -427,7 +444,7 @@ function App() {
         <h1>Refiesse Fit Mini App</h1>
         <p>
           Рабочий React-прототип в направлении <b>Soft System</b>. Сейчас задача —
-          проверить логику flow до того, как наполнять контентом и подключать Tribute.
+          проверить логику flow до того, как наполнять контентом и подключать оплату.
         </p>
         <p>
           Активный экран: <b>{currentStep}</b>
@@ -493,6 +510,7 @@ function App() {
                   go={go}
                   onAlreadyPaid={() => refreshAccess({ manual: true })}
                   onPay={startPayment}
+                  payPending={payPending}
                 />
               )}
               {screen === 'success' && <SuccessScreen data={data} go={go} />}
@@ -999,7 +1017,7 @@ function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: 
           <p className="lead">Эта тренировка входит в Premium-каталог.</p>
         </div>
         <button className="cta full" onClick={() => go('paywall')} type="button">
-          Открыть через Tribute
+          Открыть Premium
         </button>
       </div>
     </section>
@@ -1010,10 +1028,12 @@ function PaywallScreen({
   go,
   onAlreadyPaid,
   onPay,
+  payPending,
 }: {
   go: (screen: Screen) => void
   onAlreadyPaid: () => void
   onPay: () => void
+  payPending: boolean
 }) {
   return (
     <section className="screen">
@@ -1034,9 +1054,9 @@ function PaywallScreen({
           ))}
         </div>
         <div>
-          <p className="price-note">500 ₽ в месяц. Продление и отмена — в Tribute.</p>
-          <button className="cta full" onClick={onPay} type="button">
-            Открыть за 500 ₽/мес
+          <p className="price-note">500 ₽ в месяц. Оплата картой на защищённой странице.</p>
+          <button className="cta full" disabled={payPending} onClick={onPay} type="button">
+            {payPending ? 'Открываем оплату…' : 'Открыть за 500 ₽/мес'}
           </button>
           <button className="cta ghost full stacked" onClick={onAlreadyPaid} type="button">
             Я уже оплатила
@@ -1152,8 +1172,8 @@ function ProfileScreen({
       : 'Продление отключено, доступ действует до конца оплаченного периода.'
   } else if (access.isPremium) {
     subscriptionText = accessUntil
-      ? `Доступ открыт до ${accessUntil}. Продление управляется в Tribute.`
-      : 'Доступ открыт. Продление управляется в Tribute.'
+      ? `Доступ открыт до ${accessUntil}. Продление — автоматически.`
+      : 'Доступ открыт. Продление — автоматически.'
   } else {
     subscriptionText = 'Подписка не активна. Premium откроет планы, каталог и прогресс.'
   }
@@ -1171,7 +1191,7 @@ function ProfileScreen({
         <div className="badge">
           {access.isPremium ? 'Premium активен' : 'Подписка не активна'}
         </div>
-        <h3>Подписка через Tribute</h3>
+        <h3>Управление подпиской</h3>
         <p className="lead profile-lead">{subscriptionText}</p>
         {access.isPremium ? (
           <button className="cta lime full" type="button">
