@@ -93,7 +93,11 @@
       </div>
     </div>
     <div class="wrap"><table id="workoutsTable">
-      <thead><tr><th>Название</th><th>Категория</th><th>Мин</th><th>Доступ</th><th>Публикация</th><th>Видео URL</th></tr></thead>
+      <thead><tr><th>Название</th><th>Категория</th><th>Мин</th><th>Доступ</th><th>Публикация</th><th>Видео URL</th><th></th></tr></thead>
+      <!-- TODO: секций категорий/планов в UI пока нет; DELETE /admin/categories/:id
+           и /admin/programs/:id доступны через API. Кнопки удаления добавить сюда
+           при появлении этих вкладок. -->
+
       <tbody></tbody>
     </table></div>
   </section>
@@ -212,7 +216,8 @@
         '<td>' + esc(w.durationMin) + '</td>' +
         '<td><button class="small toggle-access badge ' + (w.access === 'premium' ? 'premium' : 'free') + '">' + esc(w.access) + '</button></td>' +
         '<td><button class="small toggle-pub badge ' + (w.isPublished ? 'on' : 'off') + '">' + (w.isPublished ? 'опубликована' : 'скрыта') + '</button></td>' +
-        '<td><input class="video-inp" value="' + esc(w.videoUrl || '') + '" placeholder="нет видео"> <button class="small save-video">Сохранить</button></td>';
+        '<td><input class="video-inp" value="' + esc(w.videoUrl || '') + '" placeholder="нет видео"> <button class="small save-video">Сохранить</button></td>' +
+        '<td><button class="small danger del-workout">Удалить</button></td>';
       tr.querySelector('.toggle-access').addEventListener('click', guard(async function () {
         await api('PUT', '/admin/workouts/' + w.id, { access: w.access === 'premium' ? 'free' : 'premium' });
         loadWorkouts();
@@ -224,6 +229,13 @@
       tr.querySelector('.save-video').addEventListener('click', guard(async function () {
         var value = tr.querySelector('.video-inp').value.trim();
         await api('PUT', '/admin/workouts/' + w.id, { videoUrl: value === '' ? null : value });
+      }));
+      // Удаление с защитой ссылок: при 409 api() кидает Error, guard() показывает
+      // message из ответа в статус-строке и строка остаётся на месте.
+      tr.querySelector('.del-workout').addEventListener('click', guard(async function () {
+        if (!window.confirm('Удалить тренировку «' + w.title + '»? Это действие необратимо.')) return;
+        await api('DELETE', '/admin/workouts/' + w.id);
+        loadWorkouts();
       }));
       tbody.appendChild(tr);
     });

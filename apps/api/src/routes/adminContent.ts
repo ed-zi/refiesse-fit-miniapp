@@ -155,6 +155,42 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
     }
   });
 
+  /**
+   * DELETE /admin/workouts/:id — реальное удаление с защитой ссылок.
+   * Блокируется, если на тренировку ссылаются ProgressEntry / ProgramDay /
+   * Favorite (409 WORKOUT_REFERENCED) — вместо удаления снимают с публикации.
+   */
+  app.delete('/admin/workouts/:id', adminOpts, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+
+    const workout = await app.prisma.workout.findUnique({ where: { id } });
+    if (!workout) {
+      throw new AppError(404, 'NOT_FOUND', 'Workout not found');
+    }
+
+    const [progressCount, programDayCount, favoriteCount] = await Promise.all([
+      app.prisma.progressEntry.count({ where: { workoutId: id } }),
+      app.prisma.programDay.count({ where: { workoutId: id } }),
+      app.prisma.favorite.count({ where: { workoutId: id } }),
+    ]);
+
+    if (progressCount > 0 || programDayCount > 0 || favoriteCount > 0) {
+      const reasons: string[] = [];
+      if (progressCount > 0) reasons.push(`${progressCount} выполнений`);
+      if (programDayCount > 0) reasons.push(`входит в ${programDayCount} дней планов`);
+      if (favoriteCount > 0) reasons.push(`${favoriteCount} в избранном`);
+      throw new AppError(
+        409,
+        'WORKOUT_REFERENCED',
+        `Нельзя удалить: ${reasons.join(', ')}. Снимите с публикации.`,
+      );
+    }
+
+    await app.prisma.workout.delete({ where: { id } });
+    request.log.info({ workoutId: id, slug: workout.slug }, 'admin workout deleted');
+    return { deleted: true };
+  });
+
   // -------------------------------------------------------------- categories
 
   /** GET /admin/categories. */
@@ -186,6 +222,32 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
     } catch (error) {
       mapPrismaError(error, 'Category');
     }
+  });
+
+  /**
+   * DELETE /admin/categories/:id — удаление только пустой категории.
+   * Если в категории есть тренировки → 409 CATEGORY_NOT_EMPTY.
+   */
+  app.delete('/admin/categories/:id', adminOpts, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+
+    const category = await app.prisma.category.findUnique({ where: { id } });
+    if (!category) {
+      throw new AppError(404, 'NOT_FOUND', 'Category not found');
+    }
+
+    const workoutCount = await app.prisma.workout.count({ where: { categoryId: id } });
+    if (workoutCount > 0) {
+      throw new AppError(
+        409,
+        'CATEGORY_NOT_EMPTY',
+        `Нельзя удалить: в категории ${workoutCount} тренировок. Сначала перенесите или удалите их.`,
+      );
+    }
+
+    await app.prisma.category.delete({ where: { id } });
+    request.log.info({ categoryId: id, slug: category.slug }, 'admin category deleted');
+    return { deleted: true };
   });
 
   // ---------------------------------------------------------------- programs
@@ -282,5 +344,26 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
     });
     request.log.info({ programId: id, daysCount: days.length }, 'admin program days replaced');
     return { program: updated };
+  });
+
+  /**
+   * DELETE /admin/programs/:id — удаление плана вместе с днями (транзакция).
+   * ProgramDay не хранит пользовательских данных; ProgressEntry ссылается на
+   * workout, а не на день, поэтому прогресс не теряется.
+   */
+  app.delete('/admin/programs/:id', adminOpts, async (request) => {
+    const { id } = idParamsSchema.parse(request.params);
+
+    const program = await app.prisma.program.findUnique({ where: { id } });
+    if (!program) {
+      throw new AppError(404, 'NOT_FOUND', 'Program not found');
+    }
+
+    await app.prisma.$transaction([
+      app.prisma.programDay.deleteMany({ where: { programId: id } }),
+      app.prisma.program.delete({ where: { id } }),
+    ]);
+    request.log.info({ programId: id, slug: program.slug }, 'admin program deleted');
+    return { deleted: true };
   });
 }
