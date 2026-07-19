@@ -99,6 +99,16 @@ function isWorkoutLocked(workout: Workout): boolean {
 /** Опциональная статичная ссылка-запаска; основной путь — createPayment(). */
 const paymentFallbackLink = String(import.meta.env.VITE_PAYMENT_FALLBACK_LINK ?? '').trim()
 
+/**
+ * Служебная панель навигации по экранам — ТОЛЬКО для разработки/ревью.
+ * В собранных версиях (preview/прод) скрыта; в браузере можно включить
+ * вручную, добавив ?dev к URL. Пользователи её никогда не видят.
+ */
+const showDevNav =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('dev'))
+
 const dayMonthFormat = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
   month: 'long',
@@ -473,30 +483,29 @@ function App() {
 
   return (
     <main className="board">
-      <aside className="brief" aria-label="Навигация по прототипу">
-        <h1>Refiesse Fit Mini App</h1>
-        <p>
-          Рабочий React-прототип в направлении <b>Soft System</b>. Сейчас задача —
-          проверить логику flow до того, как наполнять контентом и подключать оплату.
-        </p>
-        <p>
-          Активный экран: <b>{currentStep}</b>
-        </p>
-        <div className="steps">
-          {steps.map((step) => (
-            <button
-              className={`step ${screen === step.id ? 'active' : ''}`}
-              key={step.id}
-              onClick={() => go(step.id)}
-              type="button"
-            >
-              {step.label}
-            </button>
-          ))}
-        </div>
-      </aside>
+      {showDevNav && (
+        <aside className="brief" aria-label="Навигация по экранам (dev)">
+          <h1>Refiesse Fit</h1>
+          <p>
+            Панель навигации по экранам — только для разработки. Активный экран:{' '}
+            <b>{currentStep}</b>
+          </p>
+          <div className="steps">
+            {steps.map((step) => (
+              <button
+                className={`step ${screen === step.id ? 'active' : ''}`}
+                key={step.id}
+                onClick={() => go(step.id)}
+                type="button"
+              >
+                {step.label}
+              </button>
+            ))}
+          </div>
+        </aside>
+      )}
 
-      <section className="phone" aria-label="Refiesse Fit Mini App prototype">
+      <section className="phone" aria-label="Refiesse Fit">
         <div className="app-shell">
           <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
           {!data && !loadError && <LoadingScreen />}

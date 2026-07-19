@@ -1,11 +1,17 @@
 .board {
-  display: grid;
-  grid-template-columns: 310px 390px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 28px;
-  align-items: start;
+  align-items: flex-start;
   justify-content: center;
   min-height: 100svh;
   padding: 28px;
+}
+
+/* dev-панель навигации имеет фиксированную ширину; без неё телефон центрируется */
+.brief {
+  width: 310px;
+  flex: 0 0 310px;
 }
 
 .brief {
