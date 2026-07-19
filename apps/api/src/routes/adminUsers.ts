@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAccessStatus } from '../access.ts';
 import { makeRequireAdmin } from '../adminAuth.ts';
 import { AppError } from '../errors.ts';
+import { computeDifficultyBias, parseProfileSignals } from '../livingProfile.ts';
 import type { Prisma, User } from '../generated/prisma/client.ts';
 
 /** Admin: пользователи и их доступ (S3-4 п.4). */
@@ -68,24 +69,39 @@ export function registerAdminUserRoutes(app: FastifyInstance): void {
     return { items };
   });
 
-  /** GET /admin/users/:id — профиль + подписка + последние 10 ProgressEntry. */
+  /**
+   * GET /admin/users/:id — профиль + подписка + история тренировок + живой
+   * профиль (пост-тренировочные ответы «как ощущалось»). Для просмотра, что
+   * именно делал пользователь: последние 50 отметок «Я сделала» + агрегаты.
+   */
   app.get('/admin/users/:id', adminOpts, async (request) => {
     const { id } = idParamsSchema.parse(request.params);
 
-    const user = await app.prisma.user.findUnique({
-      where: { id },
-      include: {
-        subscription: true,
-        progressEntries: {
-          orderBy: { completedAt: 'desc' },
-          take: 10,
-          include: { workout: { select: { slug: true, title: true } } },
+    const [user, totals] = await Promise.all([
+      app.prisma.user.findUnique({
+        where: { id },
+        include: {
+          subscription: true,
+          progressEntries: {
+            orderBy: { completedAt: 'desc' },
+            take: 50,
+            include: { workout: { select: { slug: true, title: true } } },
+          },
         },
-      },
-    });
+      }),
+      app.prisma.progressEntry.aggregate({
+        where: { userId: id },
+        _count: { _all: true },
+        _sum: { durationMin: true },
+      }),
+    ]);
     if (!user) {
       throw new AppError(404, 'NOT_FOUND', 'User not found');
     }
+
+    // Живой профиль: ответы на пост-тренировочный микро-вопрос (новые сверху).
+    const signals = parseProfileSignals(user.profileSignals);
+    const feedback = [...signals.feedback].reverse();
 
     return {
       user: adminUserDto(user),
@@ -99,11 +115,21 @@ export function registerAdminUserRoutes(app: FastifyInstance): void {
             cancelledAt: user.subscription.cancelledAt?.toISOString() ?? null,
           }
         : null,
+      stats: {
+        totalWorkouts: totals._count._all,
+        totalMinutes: totals._sum.durationMin ?? 0,
+        difficultyBias: computeDifficultyBias(signals),
+      },
       progressEntries: user.progressEntries.map((entry) => ({
         workoutSlug: entry.workout.slug,
         workoutTitle: entry.workout.title,
         completedAt: entry.completedAt.toISOString(),
         durationMin: entry.durationMin,
+      })),
+      feedback: feedback.map((item) => ({
+        workoutSlug: item.workoutSlug,
+        rating: item.rating,
+        at: item.at,
       })),
     };
   });

@@ -313,6 +313,13 @@ describe('admin users', () => {
       headers: bearer(token),
       payload: { workoutSlug: 'desk-reset-5' },
     });
+    // Пост-тренировочный ответ (живой профиль) — должен попасть в карточку.
+    await app.inject({
+      method: 'POST',
+      url: '/feedback',
+      headers: bearer(token),
+      payload: { workoutSlug: 'desk-reset-5', rating: 'hard' },
+    });
 
     const byId = await app.inject({
       method: 'GET',
@@ -344,6 +351,11 @@ describe('admin users', () => {
     expect(card.json().subscription).toBeNull();
     expect(card.json().progressEntries).toHaveLength(1);
     expect(card.json().progressEntries[0].workoutSlug).toBe('desk-reset-5');
+    // Агрегаты и живой профиль в карточке.
+    expect(card.json().stats.totalWorkouts).toBe(1);
+    expect(card.json().stats.totalMinutes).toBeGreaterThan(0);
+    expect(card.json().feedback).toHaveLength(1);
+    expect(card.json().feedback[0]).toMatchObject({ workoutSlug: 'desk-reset-5', rating: 'hard' });
   });
 });
 

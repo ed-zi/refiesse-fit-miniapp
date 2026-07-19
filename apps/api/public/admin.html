@@ -301,7 +301,7 @@
         '<td>' + esc(u.username || '—') + '</td>' +
         '<td><span class="badge ' + (access.isPremium ? 'premium' : 'free') + '">' + esc(access.isPremium ? 'premium (' + access.status + ')' : access.status) + '</span></td>' +
         '<td>' + esc(access.expiresAt ? access.expiresAt.slice(0, 10) : '—') + '</td>' +
-        '<td><button class="small grant">Grant 30 дней</button> <button class="small danger revoke">Revoke</button></td>';
+        '<td><button class="small details">Детали</button> <button class="small grant">Grant 30 дней</button> <button class="small danger revoke">Revoke</button></td>';
       tr.querySelector('.grant').addEventListener('click', guard(async function () {
         await api('POST', '/admin/access/grant', { telegramUserId: u.telegramUserId, days: 30 });
         searchUsers();
@@ -310,8 +310,56 @@
         await api('POST', '/admin/access/revoke', { telegramUserId: u.telegramUserId });
         searchUsers();
       }));
+      tr.querySelector('.details').addEventListener('click', guard(function () {
+        return toggleUserDetails(tr, u.id, u.telegramUserId);
+      }));
       tbody.appendChild(tr);
     });
+  });
+
+  var RATING_LABEL = { soft: 'мягко', right: 'в самый раз', hard: 'тяжело' };
+  var BIAS_LABEL = { '-1': 'легче', '0': '—', '1': 'сложнее' };
+
+  // Разворачивает под строкой пользователя карточку с его активностью:
+  // онбординг, выполненные тренировки и пост-тренировочные ответы (живой профиль).
+  var toggleUserDetails = guard(async function (tr, id, telegramUserId) {
+    var existing = tr.nextElementSibling;
+    if (existing && existing.classList.contains('user-details')) {
+      existing.remove();
+      return;
+    }
+    var d = await api('GET', '/admin/users/' + encodeURIComponent(id));
+    var ob = d.user.onboarding || {};
+    var obText = [ob.goal, ob.level, ob.time, ob.frequency].filter(Boolean).join(' · ') +
+      (ob.equipment && ob.equipment.length ? ' · инвентарь: ' + ob.equipment.join(', ') : '');
+    var progressRows = (d.progressEntries || []).map(function (e) {
+      return '<tr><td>' + esc(e.completedAt.slice(0, 10)) + '</td><td>' + esc(e.workoutTitle) +
+        '</td><td class="muted">' + esc(e.workoutSlug) + '</td><td>' + esc(e.durationMin) + ' мин</td></tr>';
+    }).join('');
+    var feedbackRows = (d.feedback || []).map(function (f) {
+      return '<tr><td>' + esc(f.at.slice(0, 10)) + '</td><td class="muted">' + esc(f.workoutSlug) +
+        '</td><td>' + esc(RATING_LABEL[f.rating] || f.rating) + '</td></tr>';
+    }).join('');
+    var st = d.stats || {};
+    var row = document.createElement('tr');
+    row.className = 'user-details';
+    row.innerHTML = '<td colspan="6"><div class="panel">' +
+      '<div class="row" style="margin:0 0 8px">' +
+      '<strong>' + esc(telegramUserId) + '</strong>' +
+      '<span class="muted">всего тренировок: ' + esc(st.totalWorkouts || 0) +
+      ' · минут: ' + esc(st.totalMinutes || 0) +
+      ' · сложность: ' + esc(BIAS_LABEL[String(st.difficultyBias || 0)] || '—') + '</span>' +
+      '</div>' +
+      '<div class="muted" style="margin:0 0 10px">Подбор: ' + (obText ? esc(obText) : '—') + '</div>' +
+      '<div class="row" style="align-items:flex-start;gap:16px">' +
+      '<div style="flex:1;min-width:260px"><strong>Выполненные тренировки</strong>' +
+      '<div class="wrap"><table><thead><tr><th>Дата</th><th>Тренировка</th><th>slug</th><th>Длит.</th></tr></thead>' +
+      '<tbody>' + (progressRows || '<tr><td colspan="4" class="muted">Пока нет</td></tr>') + '</tbody></table></div></div>' +
+      '<div style="flex:1;min-width:220px"><strong>Как ощущалось</strong>' +
+      '<div class="wrap"><table><thead><tr><th>Дата</th><th>slug</th><th>Ответ</th></tr></thead>' +
+      '<tbody>' + (feedbackRows || '<tr><td colspan="3" class="muted">Пока нет</td></tr>') + '</tbody></table></div></div>' +
+      '</div></div></td>';
+    tr.insertAdjacentElement('afterend', row);
   });
   $('#userSearchBtn').addEventListener('click', searchUsers);
   $('#userQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') searchUsers(); });
