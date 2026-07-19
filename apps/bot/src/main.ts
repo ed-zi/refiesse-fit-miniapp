@@ -31,6 +31,34 @@ bot.command("app", async (ctx) => {
   await ctx.reply("Mini App здесь:", { reply_markup: openAppKeyboard });
 });
 
+const ADMIN_TEXT = "Управление контентом Refiesse Fit.";
+
+bot.command("admin", async (ctx) => {
+  const fromId = ctx.from?.id;
+  const isAdmin =
+    fromId !== undefined && config.adminTelegramIds.has(String(fromId));
+
+  if (!isAdmin) {
+    // Мягкий отказ + свой ID, чтобы человек мог прислать его для whitelist.
+    await ctx.reply(
+      `Админка доступна только администраторам. Ваш Telegram ID: ${fromId ?? "неизвестен"}`,
+    );
+    return;
+  }
+
+  if (!config.adminUrl) {
+    await ctx.reply("Админка ещё не настроена.");
+    return;
+  }
+
+  // web_app-кнопка в inline-клавиатуре — только HTTPS (ADMIN_URL по https).
+  const adminKeyboard = new InlineKeyboard().webApp(
+    "🛠 Открыть админку",
+    config.adminUrl,
+  );
+  await ctx.reply(ADMIN_TEXT, { reply_markup: adminKeyboard });
+});
+
 // Ошибки обработчиков логируем без падения процесса (и без токена в логах).
 bot.catch(({ ctx, error }) => {
   const prefix = `[bot] ошибка при обработке update ${ctx.update.update_id}:`;
@@ -48,6 +76,7 @@ async function main(): Promise<void> {
   await bot.api.setMyCommands([
     { command: "start", description: "Приветствие и вход в Mini App" },
     { command: "app", description: "Открыть Mini App" },
+    { command: "admin", description: "Управление контентом (для админов)" },
   ]);
 
   // Graceful shutdown: завершаем long polling, не бросая обработку текущего update.

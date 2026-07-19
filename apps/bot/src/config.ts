@@ -12,9 +12,33 @@ export interface BotConfig {
   botToken: string;
   /** URL Mini App для кнопки web_app. */
   webappUrl: string;
+  /**
+   * Полный URL админ-страницы (напр. https://api-xxx.up.railway.app/admin/ui).
+   * Опционален; не задан → /admin отвечает «Админка ещё не настроена.».
+   */
+  adminUrl: string | undefined;
+  /**
+   * Telegram user id админов (whitelist). Опционален; пусто → никто не админ.
+   * Формат env — как у API: список id через запятую.
+   */
+  adminTelegramIds: Set<string>;
 }
 
 export const DEFAULT_WEBAPP_URL = "https://ed-zi.github.io/refiesse-fit-miniapp/";
+
+/**
+ * Парсит список Telegram user id из env (через запятую) в Set строк.
+ * Пустые элементы и пробелы отбрасываются; пустой/неопределённый вход → пустой Set.
+ */
+export function parseAdminTelegramIds(raw: string | undefined): Set<string> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id !== ""),
+  );
+}
 
 /**
  * Минимальная загрузка apps/bot/.env (KEY=VALUE, # — комментарий) без зависимостей.
@@ -73,6 +97,8 @@ export function loadConfig(): BotConfig {
   }
 
   const webappUrl = process.env.WEBAPP_URL?.trim() || DEFAULT_WEBAPP_URL;
+  const adminUrl = process.env.ADMIN_URL?.trim() || undefined;
+  const adminTelegramIds = parseAdminTelegramIds(process.env.ADMIN_TELEGRAM_IDS);
 
-  return { botToken, webappUrl };
+  return { botToken, webappUrl, adminUrl, adminTelegramIds };
 }

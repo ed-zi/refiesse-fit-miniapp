@@ -8,6 +8,7 @@ Telegram-бот `@refiessefit_bot` на [grammY](https://grammy.dev). Тонки
 | --- | --- |
 | `/start` | Короткое приветствие в тоне Soft System + inline-кнопка «Открыть Refiesse Fit» (web_app) |
 | `/app` | «Mini App здесь:» + та же кнопка |
+| `/admin` | Для админов (id из `ADMIN_TELEGRAM_IDS`): кнопка «🛠 Открыть админку» (web_app на `ADMIN_URL`). Не-админам — мягкий отказ с их Telegram ID; без `ADMIN_URL` — «Админка ещё не настроена.» |
 
 Список команд регистрируется автоматически при старте (`setMyCommands`).
 
@@ -17,6 +18,8 @@ Telegram-бот `@refiessefit_bot` на [grammY](https://grammy.dev). Тонки
 | --- | --- | --- |
 | `BOT_TOKEN` | да | Токен от @BotFather. Только env/secrets, никогда в коде/git/чатах — политика ротации: `docs/ops/bot-token-rotation.md` |
 | `WEBAPP_URL` | нет | URL Mini App для кнопки. Default: `https://ed-zi.github.io/refiesse-fit-miniapp/` |
+| `ADMIN_URL` | нет | Полный HTTPS-URL админ-страницы для кнопки web_app в `/admin` (напр. `https://api-xxx.up.railway.app/admin/ui`). Не задан → `/admin` отвечает, что админка не настроена |
+| `ADMIN_TELEGRAM_IDS` | нет | Telegram user id админов через запятую (формат как у API). Пусто → `/admin` никого не пускает |
 
 ## Локальный запуск
 
