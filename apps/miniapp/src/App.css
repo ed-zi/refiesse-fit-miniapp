@@ -79,7 +79,9 @@
   height: 100%;
   overflow: auto;
   scrollbar-width: none;
-  padding: 18px 20px 124px;
+  /* нижний отступ = высота плавающей навигации + запас, чтобы контент
+     и кнопки не подрезались полупрозрачным баром на длинных экранах */
+  padding: 18px 20px 140px;
 }
 
 .screen::-webkit-scrollbar {
@@ -232,6 +234,13 @@ p,
 
 .cta.lime {
   background: var(--lime);
+  color: var(--lime-ink);
+  box-shadow: none;
+}
+
+/* Кнопка внутри салатовой карточки (.program): белая, чтобы не сливаться с фоном. */
+.cta.on-lime {
+  background: #fff;
   color: var(--lime-ink);
   box-shadow: none;
 }
@@ -623,7 +632,10 @@ p,
 }
 
 .small-paywall {
-  min-height: 330px;
+  /* высота по контенту: иначе space-between уводит CTA под нижнюю навигацию */
+  min-height: auto;
+  justify-content: flex-start;
+  gap: 16px;
   margin-top: 14px;
 }
 

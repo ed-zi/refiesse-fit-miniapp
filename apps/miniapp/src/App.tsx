@@ -1194,11 +1194,11 @@ function ProfileScreen({
         <h3>Управление подпиской</h3>
         <p className="lead profile-lead">{subscriptionText}</p>
         {access.isPremium ? (
-          <button className="cta lime full" type="button">
+          <button className="cta on-lime full" type="button">
             Управлять подпиской
           </button>
         ) : (
-          <button className="cta lime full" onClick={() => go('paywall')} type="button">
+          <button className="cta on-lime full" onClick={() => go('paywall')} type="button">
             Открыть Premium
           </button>
         )}
