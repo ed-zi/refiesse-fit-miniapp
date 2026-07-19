@@ -218,8 +218,16 @@ test.describe('Refiesse Fit — бета-флоу', () => {
       await page.getByRole('button', { name: 'Дальше' }).click()
     }
     await expect(page.getByText('Шаг 6/7')).toBeVisible()
-    // Эксклюзивная «Нет, всё ок» предвыбрана — выбираем зону.
-    await page.locator('.option:has(strong:text-is("Поясница"))').click()
+    // Онбординг персистится в dev-БД между прогонами: нормализуем состояние
+    // через эксклюзивную «Нет, всё ок», затем выбираем зону (иначе повторный
+    // клик по уже выбранной «Поясница» снял бы её).
+    const careNone = page.locator('.option:has(strong:text-is("Нет, всё ок"))')
+    const careBack = page.locator('.option:has(strong:text-is("Поясница"))')
+    await careNone.click()
+    await expect(careNone).toHaveClass(/active/)
+    await careBack.click()
+    await expect(careBack).toHaveClass(/active/)
+    await expect(careNone).not.toHaveClass(/active/)
     await page.getByRole('button', { name: 'Дальше' }).click()
 
     // Шаг 7/7 — род, завершаем.
@@ -265,5 +273,26 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(page.locator('.program .badge', { hasText: 'Подписка не активна' })).toBeVisible()
     await expect(page.getByText('Подписка не активна. Premium откроет')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Открыть Premium' })).toBeVisible()
+  })
+
+  test('Напоминания: включение показывает выбор времени', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.profile)
+
+    const card = page.locator('.reminders-card')
+    await expect(card.getByRole('heading', { name: 'Напоминания' })).toBeVisible()
+
+    // По умолчанию выключены — выбора времени нет.
+    await expect(card.locator('.reminder-hours')).toHaveCount(0)
+
+    // Включаем → появляется ряд времени; выбираем «Утро».
+    await card.getByRole('button', { name: 'Включить напоминания' }).click()
+    await expect(card.locator('.reminder-hours')).toBeVisible()
+    await card.getByRole('button', { name: 'Утро' }).click()
+    await expect(card.getByRole('button', { name: 'Утро' })).toHaveClass(/active/)
+
+    // Выключение убирает выбор времени.
+    await card.getByRole('button', { name: 'Выключить напоминания' }).click()
+    await expect(card.locator('.reminder-hours')).toHaveCount(0)
   })
 })

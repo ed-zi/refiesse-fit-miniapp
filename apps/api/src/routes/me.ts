@@ -45,8 +45,15 @@ async function toUserProfile(app: FastifyInstance, user: User): Promise<UserProf
     onboarding: parseOnboarding(user.onboarding),
     access: await getAccessStatus(app.prisma, user.id),
     isAdmin: isEffectiveAdmin(user, app.config.adminTelegramIds),
+    reminders: { optIn: user.reminderOptIn, hour: user.reminderHour },
   };
 }
+
+/** Тело PUT /me/reminders: включение и удобный час (0..23 по МСК). */
+const remindersSchema = z.object({
+  optIn: z.boolean(),
+  hour: z.number().int().min(0).max(23).nullable().optional(),
+});
 
 export function registerMeRoutes(app: FastifyInstance): void {
   /**
@@ -78,6 +85,31 @@ export function registerMeRoutes(app: FastifyInstance): void {
       });
 
       return { onboarding };
+    },
+  );
+
+  /**
+   * PUT /me/reminders — мягкие напоминания (MOTIV-1): вкл/выкл и удобный час.
+   * Выключение сбрасывает защиту от дубля (reminderLastSentOn), чтобы после
+   * повторного включения пинг мог прийти в тот же день.
+   */
+  app.put(
+    '/me/reminders',
+    { preHandler: authenticate },
+    async (request): Promise<{ reminders: { optIn: boolean; hour: number | null } }> => {
+      const { optIn, hour } = remindersSchema.parse(request.body ?? {});
+
+      const user = await app.prisma.user.update({
+        where: { id: request.user.userId },
+        data: {
+          reminderOptIn: optIn,
+          ...(hour !== undefined ? { reminderHour: hour } : {}),
+          ...(optIn ? {} : { reminderLastSentOn: null }),
+        },
+        select: { reminderOptIn: true, reminderHour: true },
+      });
+
+      return { reminders: { optIn: user.reminderOptIn, hour: user.reminderHour } };
     },
   );
 }

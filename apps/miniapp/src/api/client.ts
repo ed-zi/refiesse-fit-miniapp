@@ -19,6 +19,7 @@ import type {
   ProgressHistoryEntry,
   ProgressOverview,
   ProgressSummary,
+  ReminderSettings,
   UserProfile,
   Workout,
   WorkoutFeedbackRating,
@@ -52,6 +53,8 @@ export interface ApiClient {
   /** Актуальный статус доступа (поллится после ухода на страницу оплаты). */
   getAccess(): Promise<AccessStatus>
   saveOnboarding(answers: OnboardingAnswers): Promise<OnboardingAnswers>
+  /** Мягкие напоминания (MOTIV-1): вкл/выкл + удобный час (0..23 по МСК). */
+  updateReminders(optIn: boolean, hour: number | null): Promise<ReminderSettings>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
   markDone(workoutSlug: string): Promise<ProgressSummary>
   /** Пост-тренировочный микро-вопрос «Как ощущалось?» → живой профиль (LP-1). */
@@ -94,6 +97,7 @@ function createMockApiClient(): ApiClient {
     return 0
   }
   let onboarding: OnboardingAnswers | null = mockUser.onboarding
+  let reminders: ReminderSettings = { ...mockUser.reminders }
   let summary: ProgressSummary = { ...mockProgress, planProgress: { ...mockProgress.planProgress } }
   let entries: ProgressHistoryEntry[] = [...mockProgressEntries]
 
@@ -136,7 +140,7 @@ function createMockApiClient(): ApiClient {
         summary: { ...summary, planProgress: { ...summary.planProgress } },
         entries: [...entries],
       }),
-    getMe: () => Promise.resolve({ ...mockUser, onboarding }),
+    getMe: () => Promise.resolve({ ...mockUser, onboarding, reminders }),
     getAccess: () => Promise.resolve({ ...mockUser.access }),
     saveOnboarding: (answers) => {
       onboarding = {
@@ -144,6 +148,10 @@ function createMockApiClient(): ApiClient {
         equipment: [...answers.equipment],
       }
       return Promise.resolve(onboarding)
+    },
+    updateReminders: (optIn, hour) => {
+      reminders = { optIn, hour: optIn ? hour : reminders.hour }
+      return Promise.resolve({ ...reminders })
     },
     markDone: (workoutSlug) => {
       const workout = mockWorkouts.find((item) => item.slug === workoutSlug)
@@ -371,6 +379,13 @@ function createHttpApiClient(baseUrl: string): ApiClient {
         body: answers,
       })
       return onboarding
+    },
+    updateReminders: async (optIn, hour) => {
+      const { reminders } = await request<{ reminders: ReminderSettings }>('/me/reminders', {
+        method: 'PUT',
+        body: { optIn, hour },
+      })
+      return reminders
     },
     markDone: async (workoutSlug) => {
       const { summary } = await request<{ summary: ProgressSummary }>('/progress', {

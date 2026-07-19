@@ -482,6 +482,21 @@ function App() {
       })
   }
 
+  /** Мягкие напоминания (MOTIV-1): сохранить настройку + оптимистично обновить me. */
+  function updateReminders(optIn: boolean, hour: number | null) {
+    void apiClient
+      .updateReminders(optIn, hour)
+      .then((reminders) => {
+        setData((current) =>
+          current ? { ...current, me: { ...current.me, reminders } } : current,
+        )
+        showToast(optIn ? 'Напоминания включены' : 'Напоминания выключены')
+      })
+      .catch(() => {
+        showToast('Не получилось сохранить напоминания')
+      })
+  }
+
   function editOnboarding() {
     if (data?.me.onboarding) {
       // Старые профили без level/frequency — добираем дефолтами, чтобы все
@@ -613,7 +628,12 @@ function App() {
                 />
               )}
               {screen === 'profile' && (
-                <ProfileScreen go={go} me={data.me} onEditOnboarding={editOnboarding} />
+                <ProfileScreen
+                  go={go}
+                  me={data.me}
+                  onEditOnboarding={editOnboarding}
+                  onUpdateReminders={updateReminders}
+                />
               )}
               {feedbackSlug && (
                 <FeedbackPrompt
@@ -1383,15 +1403,29 @@ function ProgressScreen({
   )
 }
 
+/** Варианты времени для напоминаний (час по МСК). */
+const reminderHourOptions: Array<{ hour: number; label: string }> = [
+  { hour: 9, label: 'Утро' },
+  { hour: 14, label: 'День' },
+  { hour: 19, label: 'Вечер' },
+  { hour: 21, label: 'Поздний вечер' },
+]
+
 function ProfileScreen({
   go,
   me,
   onEditOnboarding,
+  onUpdateReminders,
 }: {
   go: (screen: Screen) => void
   me: UserProfile
   onEditOnboarding: () => void
+  onUpdateReminders: (optIn: boolean, hour: number | null) => void
 }) {
+  // Фолбэк на случай ответа старого API без reminders — не роняем экран.
+  const reminders = me.reminders ?? { optIn: false, hour: null }
+  const remindOptIn = reminders.optIn
+  const remindHour = reminders.hour ?? 19
   const access = me.access
   const accessUntil = formatDayMonth(access.expiresAt)
   let subscriptionText: string
@@ -1430,6 +1464,35 @@ function ProfileScreen({
           <button className="cta on-lime full" onClick={() => go('paywall')} type="button">
             Открыть Premium
           </button>
+        )}
+      </div>
+      <div className="program reminders-card">
+        <div className="badge">{remindOptIn ? 'Напоминания включены' : 'Мягкие напоминания'}</div>
+        <h3>Напоминания</h3>
+        <p className="lead profile-lead">
+          Тёплый пинг в Telegram, если за день так и не нашлось минутки. Без вины и
+          давления — выключить можно в любой момент.
+        </p>
+        <button
+          className={`cta ${remindOptIn ? 'secondary' : 'on-lime'} full`}
+          onClick={() => onUpdateReminders(!remindOptIn, remindHour)}
+          type="button"
+        >
+          {remindOptIn ? 'Выключить напоминания' : 'Включить напоминания'}
+        </button>
+        {remindOptIn && (
+          <div className="reminder-hours" role="group" aria-label="Время напоминания">
+            {reminderHourOptions.map((option) => (
+              <button
+                className={`chip ${remindHour === option.hour ? 'active' : ''}`}
+                key={option.hour}
+                onClick={() => onUpdateReminders(true, option.hour)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       <button className="cta secondary full" onClick={onEditOnboarding} type="button">

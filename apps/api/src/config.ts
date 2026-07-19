@@ -62,6 +62,19 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .transform((value) => value === 'true')
     .default(false),
+  /**
+   * Мягкие напоминания (MOTIV-1). Планировщик шлёт пинги только тем, кто сам
+   * включил их в профиле, поэтому по умолчанию включено. 'false' полностью
+   * останавливает планировщик (например, на время инцидента).
+   */
+  REMINDERS_ENABLED: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .default(true),
+  /**
+   * URL Mini App для web_app-кнопки в напоминании. Не задан → пинг без кнопки.
+   */
+  WEBAPP_URL: z.string().min(1).optional(),
 });
 
 export interface AppConfig {
@@ -84,6 +97,10 @@ export interface AppConfig {
   yookassaSecretKey: string | undefined;
   yookassaReturnUrl: string | undefined;
   billingAutochargeEnabled: boolean;
+  /** Мягкие напоминания (MOTIV-1): планировщик активен. */
+  remindersEnabled: boolean;
+  /** URL Mini App для web_app-кнопки в напоминании (опц.). */
+  webappUrl: string | undefined;
 }
 
 export class ConfigError extends Error {
@@ -149,5 +166,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     yookassaSecretKey: e.YOOKASSA_SECRET_KEY,
     yookassaReturnUrl: e.YOOKASSA_RETURN_URL,
     billingAutochargeEnabled: e.BILLING_AUTOCHARGE_ENABLED,
+    remindersEnabled: e.REMINDERS_ENABLED,
+    webappUrl: e.WEBAPP_URL,
   };
 }

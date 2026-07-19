@@ -188,6 +188,12 @@ export interface AccessStatus {
   expiresAt: string | null
 }
 
+/** Настройки мягких напоминаний (MOTIV-1). hour — 0..23 по МСК; null — час не выбран. */
+export interface ReminderSettings {
+  optIn: boolean
+  hour: number | null
+}
+
 /** Профиль пользователя Mini App (ответ /me). */
 export interface UserProfile {
   id: string
@@ -199,6 +205,8 @@ export interface UserProfile {
   /** Сохранённый подбор; null — онбординг ещё не пройден. */
   onboarding: OnboardingAnswers | null
   access: AccessStatus
+  /** Мягкие напоминания (MOTIV-1). */
+  reminders: ReminderSettings
 }
 
 // ---------------------------------------------------------------------------

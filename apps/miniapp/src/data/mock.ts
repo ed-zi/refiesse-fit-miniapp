@@ -201,6 +201,7 @@ export const mockUser: UserProfile = {
     status: 'active',
     expiresAt: '2026-07-18T00:00:00.000Z',
   },
+  reminders: { optIn: false, hour: null },
 }
 
 // ---------------------------------------------------------------------------

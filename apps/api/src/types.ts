@@ -51,6 +51,8 @@ export interface UserProfile {
   access: AccessStatus;
   /** Эффективный признак админа (user.isAdmin ИЛИ telegram id в ADMIN_TELEGRAM_IDS). */
   isAdmin: boolean;
+  /** Мягкие напоминания (MOTIV-1): opt-in + час (0..23 по МСК) или null. */
+  reminders: { optIn: boolean; hour: number | null };
 }
 
 export interface AuthResponse {

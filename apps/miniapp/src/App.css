@@ -295,6 +295,18 @@ p,
   color: #fff;
 }
 
+/* Напоминания (MOTIV-1): ряд выбора времени под кнопкой включения. */
+.reminders-card {
+  margin-top: 14px;
+}
+
+.reminder-hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .section-title {
   display: flex;
   justify-content: space-between;

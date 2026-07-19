@@ -74,6 +74,13 @@ model User {
   // формат и разбор в src/livingProfile.ts. Влияет на сложность в рекомендациях.
   profileSignals Json? @map("profile_signals")
 
+  // Мягкие напоминания (MOTIV-1). Мотивация-lite: opt-in + удобный час (МСК).
+  // Отправляет API-планировщик (у него есть и БД, и токен бота) тем, кто сегодня
+  // ещё не занимался. reminderLastSentOn — защита от повторной отправки за день.
+  reminderOptIn     Boolean   @default(false) @map("reminder_opt_in")
+  reminderHour      Int?      @map("reminder_hour")       // 0..23 по МСК
+  reminderLastSentOn DateTime? @db.Date @map("reminder_last_sent_on")
+
   isAdmin   Boolean  @default(false) @map("is_admin")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

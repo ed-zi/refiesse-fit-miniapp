@@ -31,6 +31,9 @@ export const testConfig: AppConfig = {
   yookassaSecretKey: TEST_YOOKASSA_SECRET_KEY,
   yookassaReturnUrl: TEST_YOOKASSA_RETURN_URL,
   billingAutochargeEnabled: false,
+  // Планировщик напоминаний в тестах не запускаем (buildApp не стартует таймер).
+  remindersEnabled: false,
+  webappUrl: undefined,
 };
 
 export interface BuildInitDataOptions {
