@@ -157,6 +157,12 @@ function App() {
         // старые профили без level/frequency добираются дефолтами.
         if (me.onboarding) {
           setOnboardingAnswers({ ...defaultOnboardingAnswers, ...me.onboarding })
+        } else {
+          // Новый пользователь ещё не проходил подбор → квиз как онбординг,
+          // сразу при первом открытии (а не спрятанной кнопкой на Home).
+          setOnboardingStep(0)
+          setScreen('onboarding')
+          window.scrollTo({ top: 0 })
         }
       })
       .catch((error: unknown) => {
