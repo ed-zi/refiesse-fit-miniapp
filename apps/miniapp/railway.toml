@@ -1,0 +1,21 @@
+# Railway — конфигурация фронта Mini App (apps/miniapp).
+#
+# В UI: New Service → тот же GitHub repo → Settings:
+#   - Root Directory = "/" (или пусто) — контекст сборки = корень монорепо,
+#     т.к. фронт зависит от workspace-пакета @refiesse-fit/shared.
+#   - Dockerfile Path = apps/miniapp/Dockerfile
+#
+# Variables (build-time, пекутся в бандл):
+#   VITE_API_URL = https://${{ api.RAILWAY_PUBLIC_DOMAIN }}   (публичный URL API-сервиса)
+#   VITE_PAYMENT_FALLBACK_LINK, VITE_SENTRY_DSN — опционально.
+#
+# Это статика (Caddy), входящий трафик есть, но healthcheck необязателен —
+# Caddy поднимается мгновенно.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "apps/miniapp/Dockerfile"
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

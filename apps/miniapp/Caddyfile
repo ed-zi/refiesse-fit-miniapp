@@ -1,0 +1,9 @@
+# Caddy отдаёт собранный SPA Mini App. Railway задаёт $PORT — Caddy читает его
+# из окружения. SPA-fallback на index.html (на будущее; сейчас у приложения нет
+# клиентских маршрутов, но это безопасно и не мешает).
+:{$PORT:8080} {
+	root * /srv
+	encode gzip
+	try_files {path} /index.html
+	file_server
+}

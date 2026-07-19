@@ -1,0 +1,12 @@
+# Игнор для Docker-сборок с контекстом = корень монорепо (apps/miniapp/Dockerfile).
+# API и bot собираются с контекстом apps/api|apps/bot и сюда не смотрят.
+**/node_modules
+**/dist
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tsbuildinfo
+**/src/generated
+test-results
+playwright-report

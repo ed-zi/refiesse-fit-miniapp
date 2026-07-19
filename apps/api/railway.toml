@@ -1,8 +1,12 @@
 # Railway — конфигурация API-сервиса (apps/api).
 # В UI: New Service → GitHub repo → Settings → Root Directory = apps/api.
-# Секреты (DATABASE_URL, BOT_TOKEN, JWT_SECRET, TRIBUTE_API_KEY, ADMIN_TOKEN,
-# CORS_ORIGIN, SENTRY_DSN, NODE_ENV=production) задаются в Variables сервиса.
-# DATABASE_URL удобно сослать на Postgres-плагин: ${{ Postgres.DATABASE_URL }}.
+# Variables сервиса:
+#   DATABASE_URL = ${{ Postgres.DATABASE_URL }}   (ссылка на Postgres-плагин)
+#   BOT_TOKEN, JWT_SECRET (≥32 симв.), ADMIN_TOKEN (≥32 симв.)
+#   CORS_ORIGIN = https://${{ miniapp.RAILWAY_PUBLIC_DOMAIN }}   (домен фронта)
+#   YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, YOOKASSA_RETURN_URL   (когда будет касса)
+#   SENTRY_DSN (опц.), NODE_ENV = production
+# TRIBUTE_API_KEY больше не нужен (перешли на ЮKassa; роут deprecated).
 
 [build]
 builder = "dockerfile"

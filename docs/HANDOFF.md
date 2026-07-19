@@ -3,7 +3,7 @@
 **Обновлено:** 2026-07-14
 **Назначение:** единая точка входа — что за проект, где что лежит, какие доступы нужны и куда их вписать для запуска.
 
-> ⚠️ **Секретов здесь нет и быть не должно.** Ниже перечислено, *какие* ключи/доступы нужны и *куда* они вписываются (Railway / Cloudflare / `.env`). Сами значения храните только в панелях хостинга и локальных `.env` (они в `.gitignore`).
+> ⚠️ **Секретов здесь нет и быть не должно.** Ниже перечислено, *какие* ключи/доступы нужны и *куда* они вписываются (Railway / `.env`). Сами значения храните только в панелях хостинга и локальных `.env` (они в `.gitignore`).
 
 ---
 
@@ -33,7 +33,7 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 | Общие типы | TypeScript | `packages/shared` |
 | Монорепо | npm workspaces | корень |
 
-**Хостинг (решено):** фронт — **Cloudflare Pages**; API + бот + PostgreSQL — **Railway**; GitHub Pages остаётся как preview.
+**Хостинг (решено):** всё в одном проекте **Railway** — PostgreSQL + API + бот + фронт (Caddy), always-on. GitHub Pages остаётся как preview демо-версии. Пошаговый деплой «только клики»: `docs/ops/deploy-railway.md`.
 **Оплата (решено):** **ЮKassa** (рубли, СБП + карты). Tribute отклонён (не даёт подписку через Mini App).
 
 ---
@@ -64,9 +64,8 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 5. Подробности и механика: `docs/product/payments-yookassa.md`.
 
 ### 4.2 Хостинг — блокирует выход в интернет
-1. **Аккаунт Railway** — для API + бота + PostgreSQL. Создать проект, привязать репозиторий (или дать доступ/токен).
-2. **Аккаунт Cloudflare** — для Pages (фронт). Бесплатного тарифа хватит.
-3. Пошаговый деплой: `docs/ops/deployment.md`.
+1. **Аккаунт Railway** (регистрация через GitHub) — там поднимается ВСЁ: PostgreSQL + API + бот + фронт в одном проекте. ~$5/мес.
+2. Пошаговый деплой «только клики»: **`docs/ops/deploy-railway.md`**.
 
 ### 4.3 Безопасность — обязательно перед прод-релизом
 1. **Перевыпустить токен бота** через @BotFather (текущий засвечен в чате). Инструкция: `docs/ops/bot-token-rotation.md`.
@@ -81,7 +80,7 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 
 ## 5. Переменные окружения по сервисам
 
-> Задаются в панелях хостинга (Railway Variables / Cloudflare Pages env), локально — в `.env` файлах (в git не попадают). Полные примеры: `apps/*/.env.example`.
+> Задаются в панелях хостинга (Railway Variables (сервисов)), локально — в `.env` файлах (в git не попадают). Полные примеры: `apps/*/.env.example`.
 
 ### 5.1 API (Railway) — `apps/api`
 | Переменная | Обязательна | Назначение |
@@ -89,7 +88,7 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 | `DATABASE_URL` | да | строка подключения PostgreSQL (даёт Railway) |
 | `BOT_TOKEN` | да | токен бота — для проверки подписи initData |
 | `JWT_SECRET` | да | подпись сессионных JWT (прод: ≥32 симв.) |
-| `CORS_ORIGIN` | прод | origin фронта (домен Cloudflare Pages) |
+| `CORS_ORIGIN` | прод | origin фронта (домен сервиса miniapp на Railway) |
 | `YOOKASSA_SHOP_ID` | для оплат | shopId из ЛК ЮKassa |
 | `YOOKASSA_SECRET_KEY` | для оплат | secretKey из ЛК ЮKassa |
 | `YOOKASSA_RETURN_URL` | для оплат | куда вернуть после оплаты (Mini App) |
@@ -103,9 +102,9 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 | Переменная | Обязательна | Назначение |
 |-----------|:-----------:|-----------|
 | `BOT_TOKEN` | да | тот же токен бота |
-| `WEBAPP_URL` | нет | URL Mini App для кнопки (default — Pages preview; в проде → домен Cloudflare) |
+| `WEBAPP_URL` | нет | URL Mini App для кнопки (в проде → домен сервиса miniapp на Railway) |
 
-### 5.3 Mini App (Cloudflare Pages build) — `apps/miniapp`
+### 5.3 Mini App (Railway build-time) — `apps/miniapp`
 | Переменная | Обязательна | Назначение |
 |-----------|:-----------:|-----------|
 | `VITE_API_URL` | да (прод) | URL API на Railway. Пусто → mock-режим |
@@ -133,7 +132,8 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 | `product/backlog.md`, `product/mvp-build-spec.md` | исходный бэклог и билд-спека |
 | `tech/architecture.md` | архитектура, контракт API, схема деплоя |
 | `tech/data-model.md` | модели данных (Prisma) |
-| `ops/deployment.md` | пошаговый деплой (Railway + Cloudflare) |
+| `ops/deploy-railway.md` | **пошаговый деплой на Railway (только клики)** |
+| `ops/deployment.md` | общая заметка по деплою (исходная) |
 | `ops/release-checklist.md` | обязательное перед прод-релизом (security) |
 | `ops/bot-token-rotation.md` | перевыпуск токена бота |
 | `content/content-matrix.md` | контент: тренировки, планы, тексты, что дать Кате |
@@ -171,11 +171,13 @@ cd apps/bot && cp .env.example .env  # BOT_TOKEN → npm run dev
 
 ## 9. Порядок первого прод-запуска (кратко)
 
-1. Перевыпустить токен бота (@BotFather) → сохранить в Railway.
-2. Railway: создать PostgreSQL + сервис API (env из 5.1) → задеплоить → миграции применяются автоматически → выполнить seed.
-3. Railway: сервис бота (env из 5.2).
-4. Cloudflare Pages: подключить репо, build-команда фронта, env `VITE_API_URL` = адрес API.
-5. Прописать домены: `CORS_ORIGIN` (API) и `WEBAPP_URL` (бот) → домен Cloudflare; в @BotFather menu button → домен Cloudflare.
-6. ЮKassa: `shopId`/`secretKey` в Railway, URL вебхука в ЛК ЮKassa, тестовая оплата на тестовом магазине.
-7. Пройти `docs/ops/release-checklist.md`.
-8. Запуск канала по `docs/launch/`.
+Полный пошаговый чеклист «только клики» — **`docs/ops/deploy-railway.md`**. Вкратце:
+
+1. Railway: **New Project → Deploy PostgreSQL**.
+2. Railway: сервис **api** (Root Directory `apps/api`, env из 5.1, на первый деплой `SEED_ON_START=true`) → домен → `/health` отвечает → убрать `SEED_ON_START`.
+3. Railway: сервис **miniapp** (Root Directory `/`, `VITE_API_URL` = домен api) → домен = URL Mini App.
+4. Связать: `CORS_ORIGIN` (api) = домен miniapp.
+5. Перевыпустить токен бота (@BotFather) → `BOT_TOKEN` в сервис api.
+6. Railway: сервис **bot** (Root Directory `apps/bot`, `BOT_TOKEN`, `WEBAPP_URL` = домен miniapp).
+7. @BotFather → menu button URL = домен miniapp. Пройти чеклист проверки (шаг 9 в deploy-railway.md).
+8. Позже — ЮKassa (`shopId`/`secretKey` в api, вебхук в ЛК), `docs/ops/release-checklist.md`, запуск канала по `docs/launch/`.

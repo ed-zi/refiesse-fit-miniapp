@@ -1,9 +1,12 @@
 # Railway — конфигурация bot-сервиса (apps/bot).
 # В UI: New Service → тот же GitHub repo → Settings → Root Directory = apps/bot.
-# Variables: BOT_TOKEN (обязателен), WEBAPP_URL (URL Mini App на Cloudflare Pages),
-# NODE_ENV=production.
+# Variables:
+#   BOT_TOKEN  (обязателен)
+#   WEBAPP_URL = https://${{ miniapp.RAILWAY_PUBLIC_DOMAIN }}  (URL фронта-сервиса)
+#   NODE_ENV = production
 #
 # Это worker (long polling) — входящего HTTP нет, healthcheckPath не задаём.
+# На Railway воркер не засыпает (в отличие от Render Free), long polling ок.
 
 [build]
 builder = "dockerfile"
