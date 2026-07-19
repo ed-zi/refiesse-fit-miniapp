@@ -81,6 +81,36 @@
   overflow: hidden;
 }
 
+/* Full-bleed: внутри Telegram и на узких/мобильных экранах приложение занимает
+   весь экран — без рамки-макета устройства, скруглений и тени. */
+.in-telegram .board {
+  padding: 0;
+  gap: 0;
+}
+
+.in-telegram .phone {
+  width: 100%;
+  height: 100svh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .board {
+    padding: 0;
+    gap: 0;
+  }
+
+  .phone {
+    width: 100%;
+    height: 100svh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 .screen {
   height: 100%;
   overflow: auto;
