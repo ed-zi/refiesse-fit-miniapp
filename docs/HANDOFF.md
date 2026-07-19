@@ -93,7 +93,8 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 | `YOOKASSA_SECRET_KEY` | для оплат | secretKey из ЛК ЮKassa |
 | `YOOKASSA_RETURN_URL` | для оплат | куда вернуть после оплаты (Mini App) |
 | `BILLING_AUTOCHARGE_ENABLED` | нет | `true`/`false` — автосписание (default false) |
-| `ADMIN_TOKEN` | для админки | доступ к `/admin/*` (прод: ≥32 симв.) |
+| `ADMIN_TOKEN` | для веб-админки | доступ к `/admin/*` по токену (прод: ≥32 симв.) |
+| `ADMIN_TELEGRAM_IDS` | для TG-админки | Telegram id админов через запятую — вход в админку из Telegram без токена |
 | `SENTRY_DSN` | нет | мониторинг ошибок (пусто → выключен) |
 | `JWT_EXPIRES_IN`, `INIT_DATA_MAX_AGE_SEC`, `PORT`, `NODE_ENV` | нет | значения по умолчанию есть |
 | `TRIBUTE_API_KEY` | — | DEPRECATED, не нужен |
@@ -103,6 +104,8 @@ Telegram Mini App для мягкого wellness/fitness-продукта **Refi
 |-----------|:-----------:|-----------|
 | `BOT_TOKEN` | да | тот же токен бота |
 | `WEBAPP_URL` | нет | URL Mini App для кнопки (в проде → домен сервиса miniapp на Railway) |
+| `ADMIN_URL` | для TG-админки | `https://<домен-api>/admin/ui` — куда ведёт кнопка `/admin` |
+| `ADMIN_TELEGRAM_IDS` | для TG-админки | Telegram id админов через запятую (те же, что у api) |
 
 ### 5.3 Mini App (Railway build-time) — `apps/miniapp`
 | Переменная | Обязательна | Назначение |
