@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refiesse Fit — админка</title>
+<!-- Telegram WebApp SDK: авто-вход в админку по личности внутри Telegram (TA-1). -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root { --line:#d9d9e3; --muted:#6b6b76; --bg:#f6f6f9; --accent:#3b5bdb; --danger:#c92a2a; --ok:#2b8a3e; }
   * { box-sizing:border-box; }
@@ -56,6 +58,7 @@
   <button id="saveToken" class="primary">Войти</button>
   <span id="status"></span>
 </header>
+<div id="banner" class="panel" style="display:none; margin:14px 20px; border-color:#ffc9c9; background:#fff5f5;"></div>
 <main>
   <!-- ================= Тренировки ================= -->
   <section id="tab-workouts">
@@ -128,6 +131,12 @@
   var statusEl = $('#status');
   var categories = [];
 
+  // Telegram-режим: если открыто внутри Telegram (есть initData) — вход по личности,
+  // все /admin/* идут с Authorization: Bearer. Иначе — прежний режим x-admin-token.
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var tgMode = false;
+  var bearerToken = null;
+
   function setStatus(text, kind) {
     statusEl.textContent = text || '';
     statusEl.className = kind || '';
@@ -140,10 +149,13 @@
   }
 
   async function api(method, path, body) {
+    var authHeaders = tgMode
+      ? { 'authorization': 'Bearer ' + (bearerToken || '') }
+      : { 'x-admin-token': token() };
     var res = await fetch(path, {
       method: method,
       headers: Object.assign(
-        { 'x-admin-token': token() },
+        authHeaders,
         body !== undefined ? { 'content-type': 'application/json' } : {}
       ),
       body: body !== undefined ? JSON.stringify(body) : undefined
@@ -179,13 +191,6 @@
       if (btn.dataset.tab === 'tribute') loadTribute();
     });
   });
-
-  // ---------------- токен ----------------
-  $('#token').value = token();
-  $('#saveToken').addEventListener('click', guard(async function () {
-    sessionStorage.setItem('adminToken', $('#token').value.trim());
-    await loadWorkouts(); // проверка токена сразу
-  }));
 
   // ---------------- тренировки ----------------
   var loadWorkouts = guard(async function () {
@@ -307,7 +312,64 @@
   });
   $('#tributeReloadBtn').addEventListener('click', loadTribute);
 
-  if (token()) loadWorkouts();
+  // ---------------- вход ----------------
+  function showBanner(html) {
+    var banner = $('#banner');
+    banner.innerHTML = html;
+    banner.style.display = '';
+  }
+
+  async function bootstrapTelegram() {
+    // Скрываем ручной ввод токена — вход по личности Telegram.
+    $('#token').style.display = 'none';
+    $('#saveToken').style.display = 'none';
+    try {
+      var res = await fetch('/auth/telegram', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData })
+      });
+      var authJson = await res.json();
+      if (!res.ok || !authJson.token) {
+        throw new Error((authJson.error && authJson.error.message) || 'Не удалось авторизоваться');
+      }
+      bearerToken = authJson.token;
+    } catch (err) {
+      setStatus(err.message, 'error');
+      return;
+    }
+    // Первый admin-запрос: 403 → пользователь не админ (мягкое сообщение с id).
+    try {
+      await loadWorkouts();
+      setStatus('Готово', 'ok');
+    } catch (err) {
+      var uid = (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || '—';
+      showBanner(
+        '<strong>Этот аккаунт не админ.</strong><br>' +
+        'Ваш Telegram ID: <code>' + esc(uid) + '</code><br>' +
+        '<span class="muted">Передайте этот ID, чтобы вас добавили в список администраторов.</span>'
+      );
+      setStatus('Нет доступа', 'error');
+    }
+  }
+
+  if (tg) {
+    try { tg.ready(); } catch (e) { /* вне Telegram */ }
+    try { if (tg.expand) tg.expand(); } catch (e) { /* noop */ }
+  }
+
+  if (tg && tg.initData) {
+    tgMode = true;
+    bootstrapTelegram();
+  } else {
+    // Браузерный режим: ручной x-admin-token (как раньше).
+    $('#token').value = token();
+    $('#saveToken').addEventListener('click', guard(async function () {
+      sessionStorage.setItem('adminToken', $('#token').value.trim());
+      await loadWorkouts();
+    }));
+    if (token()) loadWorkouts();
+  }
 })();
 </script>
 </body>

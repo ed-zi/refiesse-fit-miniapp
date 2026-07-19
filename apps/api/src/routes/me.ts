@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getAccessStatus } from '../access.ts';
+import { isEffectiveAdmin } from '../adminAuth.ts';
 import { authenticate } from '../auth.ts';
 import { AppError } from '../errors.ts';
 import type { OnboardingAnswers, UserProfile } from '../types.ts';
@@ -30,6 +31,7 @@ async function toUserProfile(app: FastifyInstance, user: User): Promise<UserProf
     username: user.username,
     onboarding: parseOnboarding(user.onboarding),
     access: await getAccessStatus(app.prisma, user.id),
+    isAdmin: isEffectiveAdmin(user, app.config.adminTelegramIds),
   };
 }
 

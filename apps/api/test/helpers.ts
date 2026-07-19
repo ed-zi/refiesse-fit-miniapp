@@ -24,6 +24,7 @@ export const testConfig: AppConfig = {
   corsOrigin: undefined,
   tributeApiKey: TEST_TRIBUTE_API_KEY,
   adminToken: TEST_ADMIN_TOKEN,
+  adminTelegramIds: new Set<string>(),
   port: 0,
   nodeEnv: 'test',
   yookassaShopId: TEST_YOOKASSA_SHOP_ID,

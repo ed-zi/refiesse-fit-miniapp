@@ -32,6 +32,12 @@ const envSchema = z.object({
    * Не задан → /admin/* отвечают 503 ADMIN_DISABLED.
    */
   ADMIN_TOKEN: z.string().min(1).optional(),
+  /**
+   * Telegram user id админов через запятую (напр. "111,222"). Такие пользователи
+   * получают доступ к /admin/* по своему Bearer JWT без x-admin-token — открывают
+   * админку прямо в Telegram. Пусто/не задан → список пуст.
+   */
+  ADMIN_TELEGRAM_IDS: z.string().optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   /**
@@ -67,6 +73,8 @@ export interface AppConfig {
   corsOrigin: string | undefined;
   tributeApiKey: string | undefined;
   adminToken: string | undefined;
+  /** Telegram id админов (строки цифр) — доступ к /admin/* по Bearer JWT. */
+  adminTelegramIds: Set<string>;
   port: number;
   nodeEnv: 'development' | 'test' | 'production';
   /** Опционально: отсутствие поля/undefined → Sentry выключен (S4-2). */
@@ -80,6 +88,22 @@ export interface AppConfig {
 
 export class ConfigError extends Error {
   override name = 'ConfigError';
+}
+
+/**
+ * "111, 222,, 333" → Set{'111','222','333'}. Оставляем только строки из цифр,
+ * пустые/мусорные элементы отбрасываем. Не задан → пустой Set.
+ */
+export function parseAdminTelegramIds(raw: string | undefined): Set<string> {
+  if (raw === undefined) {
+    return new Set();
+  }
+  return new Set(
+    raw
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => /^\d+$/.test(part)),
+  );
 }
 
 /** Читает и валидирует конфигурацию из env (по умолчанию — process.env). */
@@ -117,6 +141,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     corsOrigin: e.CORS_ORIGIN,
     tributeApiKey: e.TRIBUTE_API_KEY,
     adminToken: e.ADMIN_TOKEN,
+    adminTelegramIds: parseAdminTelegramIds(e.ADMIN_TELEGRAM_IDS),
     port: e.PORT,
     nodeEnv: e.NODE_ENV,
     sentryDsn: e.SENTRY_DSN,

@@ -44,6 +44,8 @@ export interface UserProfile {
   username?: string | null;
   onboarding: OnboardingAnswers | null;
   access: AccessStatus;
+  /** Эффективный признак админа (user.isAdmin ИЛИ telegram id в ADMIN_TELEGRAM_IDS). */
+  isAdmin: boolean;
 }
 
 export interface AuthResponse {
