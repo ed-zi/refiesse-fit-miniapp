@@ -42,6 +42,9 @@ const TIME_TO_MAX_MIN: Record<string, number> = {
 /** Лейбл «инвентарь не нужен» — снимает остальные и означает пустое множество. */
 export const NO_EQUIPMENT_LABEL = 'Без инвентаря';
 
+/** Эксклюзивная опция «Бережём зоны» = «ограничений нет». */
+export const CARE_NONE_LABEL = 'Нет, всё ок';
+
 /** Нормализованный профиль подбора (лейблы квиза). */
 export interface RecommendProfile {
   goal?: string;
@@ -54,6 +57,19 @@ export interface RecommendProfile {
    * Складывается с рангом уровня из квиза (см. scoreWorkout).
    */
   levelBias?: number;
+  /**
+   * «Бережём зоны» (CARE): отмеченные чувствительные места. Непустой список
+   * мягко смещает подбор к щадящему (см. scoreWorkout). «Нет, всё ок» игнорим.
+   */
+  careAreas?: string[];
+}
+
+/** Реально отмеченные чувствительные зоны (без «Нет, всё ок» и пустых). */
+export function effectiveCareAreas(careAreas: string[] | undefined): string[] {
+  if (careAreas === undefined) {
+    return [];
+  }
+  return careAreas.filter((area) => area.trim() !== '' && area !== CARE_NONE_LABEL);
 }
 
 /** Минимум, нужный для скоринга тренировки. */
@@ -139,6 +155,20 @@ export function scoreWorkout(workout: ScorableWorkout, profile: RecommendProfile
   // Free-бонус.
   if (workout.access === 'free') {
     score += 5;
+  }
+
+  // «Бережём зоны» (CARE): при отмеченных чувствительных местах мягко смещаем
+  // к щадящему — новичковое и расслабление вверх, продвинутое вниз. Мягко,
+  // чтобы не перебивать совпадение по цели (+50).
+  if (effectiveCareAreas(profile.careAreas).length > 0) {
+    if (workout.level === 'beginner') {
+      score += 8;
+    } else if (workout.level === 'advanced') {
+      score -= 20;
+    }
+    if (workout.categorySlug === 'relaxation') {
+      score += 6;
+    }
   }
 
   return score;
@@ -229,12 +259,15 @@ export function buildProfileFromOnboarding(onboarding: unknown): RecommendProfil
   const equipment = Array.isArray(raw['equipment'])
     ? raw['equipment'].filter((e): e is string => typeof e === 'string')
     : [];
+  const careAreas = Array.isArray(raw['careAreas'])
+    ? raw['careAreas'].filter((a): a is string => typeof a === 'string')
+    : [];
 
   // Пустой профиль (ни одного значимого поля) → считаем «нет onboarding».
   if (goal === undefined && time === undefined && level === undefined && equipment.length === 0) {
     return null;
   }
-  return { goal, time, equipment, level, frequency };
+  return { goal, time, equipment, level, frequency, careAreas };
 }
 
 /**

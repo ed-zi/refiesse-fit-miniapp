@@ -23,6 +23,8 @@ const onboardingSchema = z.object({
   level: z.string().optional(),
   /** Новый квиз: частота занятий. */
   frequency: z.string().optional(),
+  /** «Бережём зоны»: чувствительные места (не медицинские). */
+  careAreas: z.array(z.string()).optional(),
   /** Грамматический род для формулировок («я сделала»/«я сделал»). */
   gender: z.string().optional(),
 });

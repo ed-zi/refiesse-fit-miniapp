@@ -625,6 +625,13 @@ p,
   margin: 12px 0;
 }
 
+/* «Бережём зоны» — мягкий лавандовый вариант заметки (не тревожный). */
+.note-care {
+  border-color: #e3dcff;
+  background: #f6f3ff;
+  color: #4a3f6b;
+}
+
 .paywall {
   min-height: 520px;
   border-radius: 34px;

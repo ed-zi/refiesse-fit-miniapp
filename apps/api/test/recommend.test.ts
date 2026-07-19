@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
 import {
   buildProfileFromOnboarding,
+  effectiveCareAreas,
   pickRecommendedPlan,
   rankWorkouts,
   scoreWorkout,
@@ -83,6 +84,35 @@ describe('scoreWorkout / rankWorkouts (юнит)', () => {
     expect(ranked[0]).toBe(freeShort);
     expect(ranked[1]).toBe(freeLong);
     expect(ranked[2]).toBe(premium);
+  });
+});
+
+describe('«Бережём зоны» (CARE)', () => {
+  it('effectiveCareAreas отсеивает «Нет, всё ок» и пустые', () => {
+    expect(effectiveCareAreas(['Нет, всё ок', 'Поясница', ''])).toEqual(['Поясница']);
+    expect(effectiveCareAreas(['Нет, всё ок'])).toEqual([]);
+    expect(effectiveCareAreas(undefined)).toEqual([]);
+  });
+
+  it('при отмеченных зонах advanced штрафуется сильнее beginner', () => {
+    const profile: RecommendProfile = { equipment: [], careAreas: ['Поясница'] };
+    const beginner = wk({ level: 'beginner' });
+    const advanced = wk({ level: 'advanced' });
+    expect(scoreWorkout(beginner, profile)).toBeGreaterThan(scoreWorkout(advanced, profile));
+  });
+
+  it('только «Нет, всё ок» — нейтрально (как без CARE)', () => {
+    const withNone: RecommendProfile = { equipment: [], careAreas: ['Нет, всё ок'] };
+    const without: RecommendProfile = { equipment: [] };
+    const workout = wk({ level: 'advanced' });
+    expect(scoreWorkout(workout, withNone)).toBe(scoreWorkout(workout, without));
+  });
+
+  it('расслабление получает бонус при отмеченных зонах', () => {
+    const profile: RecommendProfile = { equipment: [], careAreas: ['Колени'] };
+    const relax = wk({ categorySlug: 'relaxation', level: 'beginner' });
+    const other = wk({ categorySlug: 'spina', level: 'beginner' });
+    expect(scoreWorkout(relax, profile)).toBeGreaterThan(scoreWorkout(other, profile));
   });
 });
 

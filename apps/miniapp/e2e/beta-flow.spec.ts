@@ -76,9 +76,11 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(freeCard).toBeVisible()
     await freeCard.click()
 
-    // Экран тренировки: есть кнопки «Начать тренировку» и «Я сделала».
+    // Экран тренировки: есть кнопки «Начать тренировку» и «Я сделал(а)».
+    // Форма глагола зависит от рода в сохранённом подборе (общий тестовый
+    // пользователь), поэтому матчим обе формы префиксом.
     await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
-    await page.getByRole('button', { name: 'Я сделала' }).click()
+    await page.getByRole('button', { name: /^Я сделал/ }).click()
 
     // Мягкий toast-подтверждение.
     await expect(page.locator('.toast.show')).toContainText('Записано')
@@ -144,24 +146,24 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     ).toBeVisible()
   })
 
-  test('Онбординг (6 шагов, инвентарь мультивыбор) → персональная подборка', async ({ page }) => {
+  test('Онбординг (7 шагов, инвентарь мультивыбор) → персональная подборка', async ({ page }) => {
     await openApp(page)
     await navTo(page, NAV.onboarding)
 
-    // Шаг 1/6: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
-    await expect(page.getByText('Шаг 1/6')).toBeVisible()
+    // Шаг 1/7: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
+    await expect(page.getByText('Шаг 1/7')).toBeVisible()
     await page.locator('.option', { hasText: 'Шея и плечи зажаты' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 2/6: уровень практики → «Новичок».
-    await expect(page.getByText('Шаг 2/6')).toBeVisible()
+    // Шаг 2/7: уровень практики → «Новичок».
+    await expect(page.getByText('Шаг 2/7')).toBeVisible()
     await page.locator('.option:has(strong:text-is("Новичок"))').click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 3/6: инвентарь — мультивыбор (можно отметить несколько).
+    // Шаг 3/7: инвентарь — мультивыбор (можно отметить несколько).
     // Матчим по заголовку опции (strong), а не по подстроке: описание
     // «Без инвентаря» содержит слово «коврика» и ловилось бы вторым элементом.
-    await expect(page.getByText('Шаг 3/6')).toBeVisible()
+    await expect(page.getByText('Шаг 3/7')).toBeVisible()
     const noEquip = page.locator('.option:has(strong:text-is("Без инвентаря"))')
     const mat = page.locator('.option:has(strong:text-is("Коврик"))')
     const band = page.locator('.option:has(strong:text-is("Резинка"))')
@@ -179,18 +181,23 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(noEquip).not.toHaveClass(/active/)
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 4/6: время → «15–20 минут».
-    await expect(page.getByText('Шаг 4/6')).toBeVisible()
+    // Шаг 4/7: время → «15–20 минут».
+    await expect(page.getByText('Шаг 4/7')).toBeVisible()
     await page.locator('.option', { hasText: '15–20 минут' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 5/6: ритм → «2–3 раза в неделю».
-    await expect(page.getByText('Шаг 5/6')).toBeVisible()
+    // Шаг 5/7: ритм → «2–3 раза в неделю».
+    await expect(page.getByText('Шаг 5/7')).toBeVisible()
     await page.locator('.option', { hasText: '2–3 раза в неделю' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 6/6: обращение (род) → финальная кнопка «Показать мою подборку».
-    await expect(page.getByText('Шаг 6/6')).toBeVisible()
+    // Шаг 6/7: бережём зоны → «Поясница» (мультивыбор, необязательный).
+    await expect(page.getByText('Шаг 6/7')).toBeVisible()
+    await page.locator('.option:has(strong:text-is("Поясница"))').click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 7/7: обращение (род) → финальная кнопка «Показать мою подборку».
+    await expect(page.getByText('Шаг 7/7')).toBeVisible()
     await page.locator('.option:has(strong:text-is("Женский род"))').click()
     await page.getByRole('button', { name: 'Показать мою подборку' }).click()
 
@@ -201,16 +208,43 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     expect(await cards.count()).toBeGreaterThan(0)
   })
 
+  test('Бережём зоны: отметка зоны показывает мягкую заметку на тренировке', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.onboarding)
+
+    // Идём на дефолтах до шага «бережём зоны» (6/7).
+    for (let i = 1; i <= 5; i += 1) {
+      await expect(page.getByText('Шаг ' + i + '/7')).toBeVisible()
+      await page.getByRole('button', { name: 'Дальше' }).click()
+    }
+    await expect(page.getByText('Шаг 6/7')).toBeVisible()
+    // Эксклюзивная «Нет, всё ок» предвыбрана — выбираем зону.
+    await page.locator('.option:has(strong:text-is("Поясница"))').click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 7/7 — род, завершаем.
+    await expect(page.getByText('Шаг 7/7')).toBeVisible()
+    await page.getByRole('button', { name: 'Показать мою подборку' }).click()
+    await expect(page.getByRole('heading', { name: 'Подобрано для тебя' })).toBeVisible()
+
+    // Открываем free-тренировку — видна мягкая заметка «Бережём».
+    await navTo(page, NAV.catalog)
+    const freeCard = page.locator('.workout-card', { has: page.locator('.pill.free') }).first()
+    await freeCard.click()
+    await expect(page.locator('.note-care')).toContainText('Бережём')
+    await expect(page.locator('.note-care')).toContainText('поясница')
+  })
+
   test('Мужской род в онбординге → кнопка «Я сделал» (без «а»)', async ({ page }) => {
     await openApp(page)
     await navTo(page, NAV.onboarding)
 
-    // Проходим первые 5 шагов на дефолтах (они предвыбраны), меняем только род.
-    for (let i = 1; i <= 5; i += 1) {
-      await expect(page.getByText('Шаг ' + i + '/6')).toBeVisible()
+    // Проходим первые 6 шагов на дефолтах (они предвыбраны), меняем только род.
+    for (let i = 1; i <= 6; i += 1) {
+      await expect(page.getByText('Шаг ' + i + '/7')).toBeVisible()
       await page.getByRole('button', { name: 'Дальше' }).click()
     }
-    await expect(page.getByText('Шаг 6/6')).toBeVisible()
+    await expect(page.getByText('Шаг 7/7')).toBeVisible()
     await page.locator('.option:has(strong:text-is("Мужской род"))').click()
     await page.getByRole('button', { name: 'Показать мою подборку' }).click()
     await expect(page.getByRole('heading', { name: 'Подобрано для тебя' })).toBeVisible()

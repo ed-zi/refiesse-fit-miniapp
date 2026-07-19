@@ -17,7 +17,7 @@ import type {
   WorkoutFeedbackRating,
   WorkoutLevel,
 } from '@refiesse-fit/shared'
-import { doneVerbLabel } from '@refiesse-fit/shared'
+import { doneVerbLabel, effectiveCareAreas } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
 import {
@@ -509,6 +509,8 @@ function App() {
 
   // Формулировка «Я сделал(а)» под выбранный в онбординге род (по умолчанию — женский).
   const doneLabel = doneVerbLabel(data?.me.onboarding?.gender)
+  // «Бережём зоны»: отмеченные чувствительные места — для мягкой заметки на тренировке.
+  const careAreas = effectiveCareAreas(data?.me.onboarding?.careAreas)
 
   return (
     <main className="board">
@@ -571,6 +573,7 @@ function App() {
               )}
               {screen === 'workout' && workoutForDetail && (
                 <WorkoutScreen
+                  careAreas={careAreas}
                   doneLabel={doneLabel}
                   go={go}
                   isFavorite={data.favorites.includes(workoutForDetail.slug)}
@@ -818,9 +821,11 @@ function OnboardingScreen({
 
   function choose(value: string) {
     setAnswers((current) => {
-      if (step.key === 'equipment') {
-        // Мультивыбор: toggle; «Без инвентаря» — эксклюзивная опция.
-        const selected = current.equipment
+      if (step.multi) {
+        // Мультивыбор (инвентарь, «бережём зоны»): toggle значений;
+        // exclusiveValue («Без инвентаря» / «Нет, всё ок») снимает остальные.
+        const raw = current[step.key]
+        const selected = Array.isArray(raw) ? raw : []
         let next: string[]
         if (step.exclusiveValue && value === step.exclusiveValue) {
           next = selected.includes(value) ? [] : [value]
@@ -829,7 +834,7 @@ function OnboardingScreen({
         } else {
           next = [...selected.filter((item) => item !== step.exclusiveValue), value]
         }
-        return { ...current, equipment: next }
+        return { ...current, [step.key]: next }
       }
       return { ...current, [step.key]: value }
     })
@@ -1055,6 +1060,7 @@ function CatalogScreen({
 }
 
 function WorkoutScreen({
+  careAreas,
   doneLabel,
   go,
   isFavorite,
@@ -1063,6 +1069,7 @@ function WorkoutScreen({
   showToast,
   workout,
 }: {
+  careAreas: string[]
   doneLabel: string
   go: (screen: Screen) => void
   isFavorite: boolean
@@ -1100,6 +1107,12 @@ function WorkoutScreen({
       <div className="note">
         <b>Осторожно:</b> {workout.cautions}
       </div>
+      {careAreas.length > 0 && (
+        <div className="note note-care">
+          <b>Бережём:</b> {careAreas.join(', ').toLowerCase()}. Двигайся мягко, без
+          боли — при дискомфорте остановись.
+        </div>
+      )}
       <button
         className="cta full"
         onClick={() => {

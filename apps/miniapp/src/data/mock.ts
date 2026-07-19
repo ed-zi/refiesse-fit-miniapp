@@ -11,6 +11,7 @@ import type {
   UserProfile,
   Workout,
 } from '@refiesse-fit/shared'
+import { CARE_NONE_LABEL } from '@refiesse-fit/shared'
 
 // ---------------------------------------------------------------------------
 // Каталог
@@ -226,8 +227,9 @@ export interface OnboardingStepDef {
   exclusiveValue?: string
 }
 
-// 6-шаговый персонализационный квиз (RP-2 + LP). Порядок:
-// (1) цель, (2) уровень, (3) инвентарь, (4) длительность, (5) частота, (6) обращение.
+// 7-шаговый персонализационный квиз (RP-2 + LP + CARE). Порядок:
+// (1) цель, (2) уровень, (3) инвентарь, (4) длительность, (5) частота,
+// (6) бережём зоны, (7) обращение.
 export const onboardingSteps: OnboardingStepDef[] = [
   {
     key: 'goal',
@@ -290,6 +292,22 @@ export const onboardingSteps: OnboardingStepDef[] = [
     ],
   },
   {
+    key: 'careAreas',
+    badge: 'бережём зоны',
+    title: 'Есть места, где нужно бережнее?',
+    description:
+      'Не диагноз — просто ориентир, чтобы подбирать мягче. Можно выбрать несколько.',
+    multi: true,
+    exclusiveValue: CARE_NONE_LABEL,
+    options: [
+      { value: CARE_NONE_LABEL, hint: 'ничего не беспокоит' },
+      { value: 'Шея и плечи', hint: 'чувствительны после нагрузки' },
+      { value: 'Поясница', hint: 'бережём спину' },
+      { value: 'Колени', hint: 'без резких приседов и прыжков' },
+      { value: 'Запястья', hint: 'меньше упора на руки' },
+    ],
+  },
+  {
     key: 'gender',
     badge: 'обращение',
     title: 'Как к тебе обращаться?',
@@ -307,6 +325,7 @@ export const defaultOnboardingAnswers: OnboardingAnswers = {
   time: '15–20 минут',
   equipment: [NO_EQUIPMENT],
   frequency: '2–3 раза в неделю',
+  careAreas: [CARE_NONE_LABEL],
   gender: 'Женский род',
 }
 
