@@ -51,6 +51,8 @@
   <h1>Refiesse Fit — админка</h1>
   <nav class="tabs">
     <button data-tab="workouts" class="active">Тренировки</button>
+    <button data-tab="plans">Планы</button>
+    <button data-tab="categories">Категории</button>
     <button data-tab="users">Пользователи</button>
     <button data-tab="tribute">Tribute events</button>
   </nav>
@@ -64,7 +66,7 @@
   <section id="tab-workouts">
     <div class="row">
       <button id="newWorkoutBtn" class="primary">+ Новая тренировка</button>
-      <span class="muted">Premium/публикация переключаются кнопками; видео-URL правится в строке.</span>
+      <span class="muted">Premium/публикация переключаются кнопками; видео-URL правится в строке. Чтобы удалить тренировку из плана — сначала удалите/пересоберите план на вкладке «Планы», затем тренировку.</span>
     </div>
     <div id="workoutForm" class="panel" style="display:none">
       <strong>Новая тренировка</strong>
@@ -94,10 +96,27 @@
     </div>
     <div class="wrap"><table id="workoutsTable">
       <thead><tr><th>Название</th><th>Категория</th><th>Мин</th><th>Доступ</th><th>Публикация</th><th>Видео URL</th><th></th></tr></thead>
-      <!-- TODO: секций категорий/планов в UI пока нет; DELETE /admin/categories/:id
-           и /admin/programs/:id доступны через API. Кнопки удаления добавить сюда
-           при появлении этих вкладок. -->
+      <tbody></tbody>
+    </table></div>
+  </section>
 
+  <!-- ================= Планы ================= -->
+  <section id="tab-plans" style="display:none">
+    <div class="row">
+      <button id="plansReloadBtn" class="primary">Обновить</button>
+      <span class="muted">Удаление плана убирает и его дни (тренировки остаются). Порядок чистки мок-контента: сначала удалить план, потом освободившиеся тренировки.</span>
+    </div>
+    <div id="plansList"></div>
+  </section>
+
+  <!-- ================= Категории ================= -->
+  <section id="tab-categories" style="display:none">
+    <div class="row">
+      <button id="categoriesReloadBtn" class="primary">Обновить</button>
+      <span class="muted">Категорию можно удалить, только если в ней нет тренировок.</span>
+    </div>
+    <div class="wrap"><table id="categoriesTable">
+      <thead><tr><th>Название</th><th>slug</th><th>Порядок</th><th>Тренировок</th><th></th></tr></thead>
       <tbody></tbody>
     </table></div>
   </section>
@@ -187,10 +206,12 @@
     btn.addEventListener('click', function () {
       document.querySelectorAll('.tabs button').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      ['workouts', 'users', 'tribute'].forEach(function (name) {
+      ['workouts', 'plans', 'categories', 'users', 'tribute'].forEach(function (name) {
         $('#tab-' + name).style.display = name === btn.dataset.tab ? '' : 'none';
       });
       if (btn.dataset.tab === 'workouts') loadWorkouts();
+      if (btn.dataset.tab === 'plans') loadPlans();
+      if (btn.dataset.tab === 'categories') loadCategories();
       if (btn.dataset.tab === 'users') searchUsers();
       if (btn.dataset.tab === 'tribute') loadTribute();
     });
@@ -294,6 +315,74 @@
   });
   $('#userSearchBtn').addEventListener('click', searchUsers);
   $('#userQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') searchUsers(); });
+
+  // ---------------- планы ----------------
+  var loadPlans = guard(async function () {
+    var data = await api('GET', '/admin/programs');
+    var list = $('#plansList');
+    list.innerHTML = '';
+    if (!data.items.length) {
+      list.innerHTML = '<div class="muted">Планов нет.</div>';
+      return;
+    }
+    data.items.forEach(function (p) {
+      var panel = document.createElement('div');
+      panel.className = 'panel';
+      var isPremium = p.access === 'premium';
+      var daysRows = (p.days || []).map(function (d) {
+        var wk = d.workout ? (d.workout.slug || d.workout.title) : (d.workoutSlug || '—');
+        return '<tr><td>' + esc(d.dayIndex) + '</td><td>' + esc(d.title) + '</td><td>' + esc(wk) + '</td></tr>';
+      }).join('');
+      panel.innerHTML =
+        '<div class="row" style="margin:0 0 8px">' +
+        '<strong>' + esc(p.title) + '</strong>' +
+        '<span class="muted">' + esc(p.slug) + '</span>' +
+        '<span class="badge ' + (isPremium ? 'premium' : 'free') + '">' + esc(p.access) + '</span>' +
+        '<span class="muted">дней: ' + esc(p.daysTotal) + '</span>' +
+        '<button class="small danger del-plan" style="margin-left:auto">Удалить план</button>' +
+        '</div>' +
+        '<div class="wrap"><table><thead><tr><th>День</th><th>Тема</th><th>Тренировка (slug)</th></tr></thead>' +
+        '<tbody>' + (daysRows || '<tr><td colspan="3" class="muted">Дней нет</td></tr>') + '</tbody></table></div>';
+      panel.querySelector('.del-plan').addEventListener('click', guard(async function () {
+        if (!window.confirm('Удалить план «' + p.title + '» вместе с его днями? Тренировки останутся.')) return;
+        await api('DELETE', '/admin/programs/' + p.id);
+        loadPlans();
+      }));
+      list.appendChild(panel);
+    });
+  });
+  $('#plansReloadBtn').addEventListener('click', loadPlans);
+
+  // ---------------- категории ----------------
+  var loadCategories = guard(async function () {
+    var data = await api('GET', '/admin/categories');
+    // Число тренировок в категории считаем по /admin/workouts (эндпоинт счётчик не отдаёт).
+    var workouts = await api('GET', '/admin/workouts');
+    var counts = {};
+    workouts.items.forEach(function (w) {
+      var cid = w.categoryId || (w.category && w.category.id);
+      if (cid) counts[cid] = (counts[cid] || 0) + 1;
+    });
+    var tbody = $('#categoriesTable tbody');
+    tbody.innerHTML = '';
+    data.items.forEach(function (c) {
+      var n = counts[c.id] || 0;
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + esc(c.title) + '</td>' +
+        '<td>' + esc(c.slug) + '</td>' +
+        '<td>' + esc(c.sortOrder) + '</td>' +
+        '<td>' + esc(n) + '</td>' +
+        '<td><button class="small danger del-category">Удалить</button></td>';
+      tr.querySelector('.del-category').addEventListener('click', guard(async function () {
+        if (!window.confirm('Удалить категорию «' + c.title + '»?')) return;
+        await api('DELETE', '/admin/categories/' + c.id);
+        loadCategories();
+      }));
+      tbody.appendChild(tr);
+    });
+  });
+  $('#categoriesReloadBtn').addEventListener('click', loadCategories);
 
   // ---------------- tribute ----------------
   var loadTribute = guard(async function () {
