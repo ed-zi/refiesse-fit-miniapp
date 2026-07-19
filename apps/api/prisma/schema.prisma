@@ -69,6 +69,11 @@ model User {
   // Контракт S2-A: хранится одним nullable Json-полем (см. shared OnboardingAnswers).
   onboarding Json?
 
+  // Живой профиль (LP-1): сигналы, накопленные после тренировок (пост-тренировочный
+  // микро-вопрос «Как ощущалось?»). JSON { feedback: [{ workoutSlug, rating, at }] } —
+  // формат и разбор в src/livingProfile.ts. Влияет на сложность в рекомендациях.
+  profileSignals Json? @map("profile_signals")
+
   isAdmin   Boolean  @default(false) @map("is_admin")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

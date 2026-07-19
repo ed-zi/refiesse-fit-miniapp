@@ -14,6 +14,7 @@ import type {
   ProgressOverview,
   UserProfile,
   Workout,
+  WorkoutFeedbackRating,
   WorkoutLevel,
 } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
@@ -137,6 +138,9 @@ function App() {
   const [payPending, setPayPending] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendations | null>(null)
   const [recsLoading, setRecsLoading] = useState(false)
+  // Живой профиль (LP-1): slug тренировки, по которой показываем микро-вопрос
+  // «Как ощущалось?» после «Я сделала». null — карточки нет.
+  const [feedbackSlug, setFeedbackSlug] = useState<string | null>(null)
 
   // Единая машина состояний загрузки: loading → error | ready (retry через reloadKey).
   useEffect(() => {
@@ -438,10 +442,31 @@ function App() {
         }
         setData((current) => (current ? { ...current, progress } : current))
         showToast('Записано. Даже 10 минут считаются')
+        // Живой профиль (LP-1): мягко спрашиваем, как ощущалось.
+        setFeedbackSlug(workoutSlug)
       } catch {
         showToast('Не получилось сохранить. Попробуйте ещё раз')
       }
     })()
+  }
+
+  /** Ответ на пост-тренировочный микро-вопрос → живой профиль (LP-1). */
+  function submitFeedback(rating: WorkoutFeedbackRating) {
+    const slug = feedbackSlug
+    setFeedbackSlug(null)
+    if (!slug) {
+      return
+    }
+    void apiClient
+      .sendFeedback(slug, rating)
+      .then(() => {
+        showToast('Спасибо — учту в следующей подборке')
+        // Свежая подборка станет актуальной при следующем заходе на экран.
+        setRecommendations(null)
+      })
+      .catch(() => {
+        // Тихо: обратная связь необязательна, не мешаем пользователю.
+      })
   }
 
   function toggleFavorite(workoutSlug: string) {
@@ -580,6 +605,12 @@ function App() {
               )}
               {screen === 'profile' && (
                 <ProfileScreen go={go} me={data.me} onEditOnboarding={editOnboarding} />
+              )}
+              {feedbackSlug && (
+                <FeedbackPrompt
+                  onAnswer={submitFeedback}
+                  onDismiss={() => setFeedbackSlug(null)}
+                />
               )}
               <BottomNav current={screen} go={go} />
             </>
@@ -1085,6 +1116,47 @@ function WorkoutScreen({
         Я сделала
       </button>
     </section>
+  )
+}
+
+/**
+ * Пост-тренировочный микро-вопрос (живой профиль, LP-1). Мягкая карточка снизу:
+ * один вопрос, три ответа в одно касание, без давления — можно закрыть.
+ */
+function FeedbackPrompt({
+  onAnswer,
+  onDismiss,
+}: {
+  onAnswer: (rating: WorkoutFeedbackRating) => void
+  onDismiss: () => void
+}) {
+  const options: Array<{ rating: WorkoutFeedbackRating; label: string }> = [
+    { rating: 'soft', label: 'Мягко' },
+    { rating: 'right', label: 'В самый раз' },
+    { rating: 'hard', label: 'Было тяжело' },
+  ]
+  return (
+    <div className="feedback-sheet" role="dialog" aria-label="Как ощущалось после тренировки">
+      <div className="feedback-card">
+        <p className="feedback-title">Как ощущалось?</p>
+        <p className="feedback-sub">Подстроим следующую подборку под тебя</p>
+        <div className="feedback-options">
+          {options.map((option) => (
+            <button
+              className="feedback-chip"
+              key={option.rating}
+              onClick={() => onAnswer(option.rating)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <button className="feedback-skip" onClick={onDismiss} type="button">
+          Позже
+        </button>
+      </div>
+    </div>
   )
 }
 

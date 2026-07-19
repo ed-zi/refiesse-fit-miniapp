@@ -2,10 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { hasAccess } from '../access.ts';
 import { authenticate } from '../auth.ts';
 import { toProgramDto, toWorkoutCardDto, type ProgramDto, type WorkoutCardDto } from '../mappers.ts';
+import { computeDifficultyBias, parseProfileSignals } from '../livingProfile.ts';
 import {
   buildProfileFromOnboarding,
   pickRecommendedPlan,
   rankWorkouts,
+  withDifficultyBias,
 } from '../recommend.ts';
 
 /**
@@ -28,7 +30,7 @@ export function registerRecommendationRoutes(app: FastifyInstance): void {
       const [user, workouts, programs, unlocked] = await Promise.all([
         app.prisma.user.findUnique({
           where: { id: request.user.userId },
-          select: { onboarding: true },
+          select: { onboarding: true, profileSignals: true },
         }),
         app.prisma.workout.findMany({
           where: { isPublished: true },
@@ -47,7 +49,9 @@ export function registerRecommendationRoutes(app: FastifyInstance): void {
         hasAccess(app.prisma, request.user.userId),
       ]);
 
-      const profile = buildProfileFromOnboarding(user?.onboarding);
+      // Профиль подбора из квиза + сдвиг сложности из живого профиля (LP-1).
+      const bias = computeDifficultyBias(parseProfileSignals(user?.profileSignals));
+      const profile = withDifficultyBias(buildProfileFromOnboarding(user?.onboarding), bias);
 
       // Скоринг работает по categorySlug — прокидываем его рядом с prisma-строкой.
       const scorable = workouts.map((workout) => ({ ...workout, categorySlug: workout.category.slug }));

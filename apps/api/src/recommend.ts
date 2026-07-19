@@ -49,6 +49,11 @@ export interface RecommendProfile {
   equipment: string[];
   level?: string;
   frequency?: string;
+  /**
+   * Сдвиг сложности из живого профиля (LP-1): −1 «легче», 0, +1 «сложнее».
+   * Складывается с рангом уровня из квиза (см. scoreWorkout).
+   */
+  levelBias?: number;
 }
 
 /** Минимум, нужный для скоринга тренировки. */
@@ -96,9 +101,13 @@ export function scoreWorkout(workout: ScorableWorkout, profile: RecommendProfile
     }
   }
 
-  // Уровень.
-  const userRank = profile.level !== undefined ? LEVEL_LABEL_TO_RANK[profile.level] : undefined;
-  if (userRank !== undefined) {
+  // Уровень. Базовый ранг — из квиза; живой профиль (LP-1) сдвигает его на
+  // levelBias. Если уровня в квизе нет, но накоплен сигнал, берём Новичка (0).
+  const baseRank = profile.level !== undefined ? LEVEL_LABEL_TO_RANK[profile.level] : undefined;
+  const bias = profile.levelBias ?? 0;
+  const seedRank = baseRank ?? (bias !== 0 ? 0 : undefined);
+  if (seedRank !== undefined) {
+    const userRank = Math.max(0, Math.min(2, seedRank + bias));
     const workoutRank = WORKOUT_LEVEL_RANK[workout.level];
     if (workoutRank > userRank) {
       score -= 30;
@@ -226,4 +235,22 @@ export function buildProfileFromOnboarding(onboarding: unknown): RecommendProfil
     return null;
   }
   return { goal, time, equipment, level, frequency };
+}
+
+/**
+ * Накладывает сдвиг сложности из живого профиля (LP-1) на профиль подбора.
+ * bias === 0 → профиль без изменений. Если onboarding нет (profile === null),
+ * но есть сигнал, строим минимальный профиль, чтобы сдвиг всё же применился.
+ */
+export function withDifficultyBias(
+  profile: RecommendProfile | null,
+  bias: number,
+): RecommendProfile | null {
+  if (bias === 0) {
+    return profile;
+  }
+  if (profile === null) {
+    return { equipment: [], levelBias: bias };
+  }
+  return { ...profile, levelBias: bias };
 }

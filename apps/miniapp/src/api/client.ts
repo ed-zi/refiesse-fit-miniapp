@@ -21,6 +21,8 @@ import type {
   ProgressSummary,
   UserProfile,
   Workout,
+  WorkoutFeedbackRating,
+  WorkoutFeedbackResult,
 } from '@refiesse-fit/shared'
 import {
   mockCategories,
@@ -52,6 +54,8 @@ export interface ApiClient {
   saveOnboarding(answers: OnboardingAnswers): Promise<OnboardingAnswers>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
   markDone(workoutSlug: string): Promise<ProgressSummary>
+  /** Пост-тренировочный микро-вопрос «Как ощущалось?» → живой профиль (LP-1). */
+  sendFeedback(workoutSlug: string, rating: WorkoutFeedbackRating): Promise<WorkoutFeedbackResult>
   toggleFavorite(workoutSlug: string): Promise<FavoriteToggleResult>
   getFavorites(): Promise<string[]>
   /** Создаёт платёж провайдера (ЮKassa) и возвращает URL страницы оплаты. */
@@ -80,6 +84,15 @@ export class ApiError extends Error {
 
 function createMockApiClient(): ApiClient {
   const favorites = new Set<string>()
+  // Живой профиль (LP-1) в прототипе: копим ответы и считаем сдвиг сложности.
+  const feedbackLog: WorkoutFeedbackRating[] = []
+  const feedbackBias = (): number => {
+    const recent = feedbackLog.slice(-5)
+    const net = recent.filter((r) => r === 'hard').length - recent.filter((r) => r === 'soft').length
+    if (net >= 2) return -1
+    if (net <= -2) return 1
+    return 0
+  }
   let onboarding: OnboardingAnswers | null = mockUser.onboarding
   let summary: ProgressSummary = { ...mockProgress, planProgress: { ...mockProgress.planProgress } }
   let entries: ProgressHistoryEntry[] = [...mockProgressEntries]
@@ -161,6 +174,14 @@ function createMockApiClient(): ApiClient {
       }
       return Promise.resolve({ ...summary, planProgress: { ...summary.planProgress } })
     },
+    sendFeedback: (workoutSlug, rating) => {
+      const workout = mockWorkouts.find((item) => item.slug === workoutSlug)
+      if (!workout) {
+        return Promise.reject(new ApiError('NOT_FOUND', 'Тренировка не найдена', 404))
+      }
+      feedbackLog.push(rating)
+      return Promise.resolve({ ok: true as const, bias: feedbackBias() })
+    },
     toggleFavorite: (workoutSlug) => {
       const favorited = !favorites.has(workoutSlug)
       if (favorited) {
@@ -179,8 +200,14 @@ function createMockApiClient(): ApiClient {
       // Имитация серверного скоринга: ставим совпадения по цели/уровню
       // сохранённого подбора вперёд, режем до топ-4. План — первый из mock.
       const goal = onboarding?.goal
+      // Живой профиль: сдвигаем предпочитаемый уровень (LP-1).
+      const bias = feedbackBias()
+      const levelRank = { beginner: 0, medium: 1, advanced: 2 } as const
+      const preferred = Math.max(0, Math.min(2, 1 + bias)) // 0 легче / 2 сложнее
       const ranked = [...mockWorkouts].sort((a, b) => {
-        const score = (workout: Workout) => (goal && workout.goal === goal ? 0 : 1)
+        const score = (workout: Workout) =>
+          (goal && workout.goal === goal ? 0 : 10) +
+          Math.abs(levelRank[workout.level] - preferred)
         return score(a) - score(b)
       })
       return Promise.resolve({
@@ -352,6 +379,11 @@ function createHttpApiClient(baseUrl: string): ApiClient {
       })
       return summary
     },
+    sendFeedback: (workoutSlug, rating) =>
+      request<WorkoutFeedbackResult>('/feedback', {
+        method: 'POST',
+        body: { workoutSlug, rating },
+      }),
     toggleFavorite: (workoutSlug) =>
       request<FavoriteToggleResult>('/favorites', {
         method: 'POST',

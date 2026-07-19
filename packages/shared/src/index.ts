@@ -122,6 +122,24 @@ export interface OnboardingAnswers {
   intensity?: string
 }
 
+/**
+ * Ответ на пост-тренировочный микро-вопрос «Как ощущалось?» (живой профиль, LP-1).
+ * soft — было мягко/легко, right — в самый раз, hard — было тяжело.
+ */
+export type WorkoutFeedbackRating = 'soft' | 'right' | 'hard'
+
+/** Тело POST /feedback. */
+export interface WorkoutFeedbackRequest {
+  workoutSlug: string
+  rating: WorkoutFeedbackRating
+}
+
+/** Ответ POST /feedback. bias — текущий сдвиг сложности (−1..+1) для подсказки UI. */
+export interface WorkoutFeedbackResult {
+  ok: true
+  bias: number
+}
+
 /** Статус подписки (Subscription.status в data-model). */
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired'
 

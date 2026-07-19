@@ -16,6 +16,7 @@ import { registerAdminUserRoutes } from './routes/adminUsers.ts';
 import { registerAuthRoutes } from './routes/auth.ts';
 import { registerCatalogRoutes } from './routes/catalog.ts';
 import { registerFavoriteRoutes } from './routes/favorites.ts';
+import { registerFeedbackRoutes } from './routes/feedback.ts';
 import { registerMeRoutes } from './routes/me.ts';
 import { registerPaymentRoutes } from './routes/payments.ts';
 import { registerPlanRoutes } from './routes/plans.ts';
@@ -167,6 +168,7 @@ export async function buildApp(
   registerProgressRoutes(app);
   registerRecommendationRoutes(app);
   registerFavoriteRoutes(app);
+  registerFeedbackRoutes(app);
   registerAccessRoutes(app);
   registerAdminRoutes(app);
   registerAdminContentRoutes(app);

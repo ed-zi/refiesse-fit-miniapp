@@ -95,6 +95,14 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     // История практик содержит только что отмеченную тренировку.
     await expect(page.getByRole('heading', { name: 'Недавние практики' })).toBeVisible()
     await expect(page.locator('.history-item').first()).toBeVisible()
+
+    // Живой профиль (LP-1): пост-тренировочный микро-вопрос «Как ощущалось?».
+    const sheet = page.locator('.feedback-sheet')
+    await expect(sheet).toBeVisible()
+    await expect(sheet).toContainText('Как ощущалось?')
+    await page.getByRole('button', { name: 'В самый раз' }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(page.locator('.toast.show')).toContainText('Спасибо')
   })
 
   test('Premium-карточка ведёт в locked, затем в paywall', async ({ page }) => {
@@ -136,24 +144,24 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     ).toBeVisible()
   })
 
-  test('Онбординг (4 шага, инвентарь мультивыбор) фильтрует каталог', async ({ page }) => {
+  test('Онбординг (5 шагов, инвентарь мультивыбор) → персональная подборка', async ({ page }) => {
     await openApp(page)
     await navTo(page, NAV.onboarding)
 
-    // Шаг 1/4: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
-    await expect(page.getByText('Шаг 1/4')).toBeVisible()
+    // Шаг 1/5: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
+    await expect(page.getByText('Шаг 1/5')).toBeVisible()
     await page.locator('.option', { hasText: 'Шея и плечи зажаты' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 2/4: время → «15–20 минут» (maxDuration 20).
-    await expect(page.getByText('Шаг 2/4')).toBeVisible()
-    await page.locator('.option', { hasText: '15–20 минут' }).click()
+    // Шаг 2/5: уровень практики → «Новичок».
+    await expect(page.getByText('Шаг 2/5')).toBeVisible()
+    await page.locator('.option:has(strong:text-is("Новичок"))').click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 3/4: инвентарь — мультивыбор (можно отметить несколько).
+    // Шаг 3/5: инвентарь — мультивыбор (можно отметить несколько).
     // Матчим по заголовку опции (strong), а не по подстроке: описание
     // «Без инвентаря» содержит слово «коврика» и ловилось бы вторым элементом.
-    await expect(page.getByText('Шаг 3/4')).toBeVisible()
+    await expect(page.getByText('Шаг 3/5')).toBeVisible()
     const noEquip = page.locator('.option:has(strong:text-is("Без инвентаря"))')
     const mat = page.locator('.option:has(strong:text-is("Коврик"))')
     const band = page.locator('.option:has(strong:text-is("Резинка"))')
@@ -171,23 +179,21 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(noEquip).not.toHaveClass(/active/)
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 4/4: режим → финальная кнопка «Показать тренировки».
-    await expect(page.getByText('Шаг 4/4')).toBeVisible()
-    await page.locator('.option', { hasText: 'Очень мягко' }).click()
-    await page.getByRole('button', { name: 'Показать тренировки' }).click()
+    // Шаг 4/5: время → «15–20 минут».
+    await expect(page.getByText('Шаг 4/5')).toBeVisible()
+    await page.locator('.option', { hasText: '15–20 минут' }).click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Каталог отфильтрован под подбор: виден бейдж фильтра, тренировок меньше полного набора.
-    await expect(page.locator('.filter-note')).toContainText('Показан подбор под ваше состояние')
+    // Шаг 5/5: ритм → финальная кнопка «Показать мою подборку».
+    await expect(page.getByText('Шаг 5/5')).toBeVisible()
+    await page.locator('.option', { hasText: '2–3 раза в неделю' }).click()
+    await page.getByRole('button', { name: 'Показать мою подборку' }).click()
+
+    // После квиза — экран персональной подборки с ранжированными карточками.
+    await expect(page.getByRole('heading', { name: 'Подобрано для тебя' })).toBeVisible()
     const cards = page.locator('.workout-card')
     await expect(cards.first()).toBeVisible()
-    const filteredCount = await cards.count()
-    expect(filteredCount).toBeGreaterThan(0)
-    expect(filteredCount).toBeLessThan(13)
-
-    // Сброс фильтра возвращает полный каталог.
-    await page.locator('.filter-note button', { hasText: 'Сбросить' }).click()
-    await expect(page.locator('.filter-note')).toHaveCount(0)
-    expect(await cards.count()).toBeGreaterThan(filteredCount)
+    expect(await cards.count()).toBeGreaterThan(0)
   })
 
   test('Профиль без premium: «Подписка не активна»', async ({ page }) => {
