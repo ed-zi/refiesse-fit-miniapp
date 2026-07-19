@@ -109,7 +109,7 @@ test.describe('Refiesse Fit — бета-флоу', () => {
 
     // Locked-экран: premium-контент закрыт, есть CTA в paywall.
     await expect(page.getByRole('heading', { name: 'Откройте доступ, чтобы продолжить' })).toBeVisible()
-    const toPaywall = page.getByRole('button', { name: 'Открыть через Tribute' })
+    const toPaywall = page.getByRole('button', { name: 'Открыть Premium' })
     await expect(toPaywall).toBeVisible()
     await toPaywall.click()
 
@@ -120,10 +120,10 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(page.getByRole('button', { name: /Открыть за 500/ })).toBeVisible()
   })
 
-  test('Paywall без VITE_TRIBUTE_LINK: мягкий toast, без внешнего перехода', async ({ page }) => {
+  test('Paywall без настроенной оплаты: мягкий toast, без внешнего перехода', async ({ page }) => {
     await openApp(page)
     // Прямой заход на paywall через левую навигацию.
-    await navTo(page, 'Paywall: ценность + Tribute')
+    await navTo(page, 'Paywall: ценность + оплата')
     await expect(
       page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),
     ).toBeVisible()
@@ -154,12 +154,21 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     // Матчим по заголовку опции (strong), а не по подстроке: описание
     // «Без инвентаря» содержит слово «коврика» и ловилось бы вторым элементом.
     await expect(page.getByText('Шаг 3/4')).toBeVisible()
+    const noEquip = page.locator('.option:has(strong:text-is("Без инвентаря"))')
     const mat = page.locator('.option:has(strong:text-is("Коврик"))')
     const band = page.locator('.option:has(strong:text-is("Резинка"))')
+    // Нормализуем стартовое состояние: онбординг мог сохраниться из прошлой
+    // сессии (подбор персистится в БД), тогда клик по уже выбранной опции
+    // снял бы её. Эксклюзивная «Без инвентаря» сбрасывает выбор в известное.
+    await noEquip.click()
+    await expect(noEquip).toHaveClass(/active/)
+    // Теперь Коврик и Резинка гарантированно неактивны → клик их включает.
     await mat.click()
     await band.click()
     await expect(mat).toHaveClass(/active/)
     await expect(band).toHaveClass(/active/)
+    // «Без инвентаря» эксклюзивна — после выбора инвентаря она снялась.
+    await expect(noEquip).not.toHaveClass(/active/)
     await page.getByRole('button', { name: 'Дальше' }).click()
 
     // Шаг 4/4: режим → финальная кнопка «Показать тренировки».
@@ -185,7 +194,7 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await openApp(page)
     await navTo(page, NAV.profile)
 
-    await expect(page.getByRole('heading', { name: 'Подписка через Tribute' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Управление подпиской' })).toBeVisible()
     // Бейдж статуса и поясняющий текст — доступ не оплачен.
     await expect(page.locator('.program .badge', { hasText: 'Подписка не активна' })).toBeVisible()
     await expect(page.getByText('Подписка не активна. Premium откроет')).toBeVisible()
