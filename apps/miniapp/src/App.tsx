@@ -1318,7 +1318,7 @@ function ProfileScreen({
       <div className="profile-card">
         <h3>{me.firstName}</h3>
         <p className="lead">
-          {me.telegramUserId !== null ? 'Telegram ID связан' : 'Браузерный прототип'}
+          {me.telegramUserId !== null ? 'Аккаунт Telegram' : 'Профиль'}
         </p>
       </div>
       <div className="program">
