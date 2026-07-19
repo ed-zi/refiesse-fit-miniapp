@@ -144,24 +144,24 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     ).toBeVisible()
   })
 
-  test('Онбординг (5 шагов, инвентарь мультивыбор) → персональная подборка', async ({ page }) => {
+  test('Онбординг (6 шагов, инвентарь мультивыбор) → персональная подборка', async ({ page }) => {
     await openApp(page)
     await navTo(page, NAV.onboarding)
 
-    // Шаг 1/5: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
-    await expect(page.getByText('Шаг 1/5')).toBeVisible()
+    // Шаг 1/6: состояние → «Шея и плечи зажаты» (маппится на категорию spina).
+    await expect(page.getByText('Шаг 1/6')).toBeVisible()
     await page.locator('.option', { hasText: 'Шея и плечи зажаты' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 2/5: уровень практики → «Новичок».
-    await expect(page.getByText('Шаг 2/5')).toBeVisible()
+    // Шаг 2/6: уровень практики → «Новичок».
+    await expect(page.getByText('Шаг 2/6')).toBeVisible()
     await page.locator('.option:has(strong:text-is("Новичок"))').click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 3/5: инвентарь — мультивыбор (можно отметить несколько).
+    // Шаг 3/6: инвентарь — мультивыбор (можно отметить несколько).
     // Матчим по заголовку опции (strong), а не по подстроке: описание
     // «Без инвентаря» содержит слово «коврика» и ловилось бы вторым элементом.
-    await expect(page.getByText('Шаг 3/5')).toBeVisible()
+    await expect(page.getByText('Шаг 3/6')).toBeVisible()
     const noEquip = page.locator('.option:has(strong:text-is("Без инвентаря"))')
     const mat = page.locator('.option:has(strong:text-is("Коврик"))')
     const band = page.locator('.option:has(strong:text-is("Резинка"))')
@@ -179,14 +179,19 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(noEquip).not.toHaveClass(/active/)
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 4/5: время → «15–20 минут».
-    await expect(page.getByText('Шаг 4/5')).toBeVisible()
+    // Шаг 4/6: время → «15–20 минут».
+    await expect(page.getByText('Шаг 4/6')).toBeVisible()
     await page.locator('.option', { hasText: '15–20 минут' }).click()
     await page.getByRole('button', { name: 'Дальше' }).click()
 
-    // Шаг 5/5: ритм → финальная кнопка «Показать мою подборку».
-    await expect(page.getByText('Шаг 5/5')).toBeVisible()
+    // Шаг 5/6: ритм → «2–3 раза в неделю».
+    await expect(page.getByText('Шаг 5/6')).toBeVisible()
     await page.locator('.option', { hasText: '2–3 раза в неделю' }).click()
+    await page.getByRole('button', { name: 'Дальше' }).click()
+
+    // Шаг 6/6: обращение (род) → финальная кнопка «Показать мою подборку».
+    await expect(page.getByText('Шаг 6/6')).toBeVisible()
+    await page.locator('.option:has(strong:text-is("Женский род"))').click()
     await page.getByRole('button', { name: 'Показать мою подборку' }).click()
 
     // После квиза — экран персональной подборки с ранжированными карточками.
@@ -194,6 +199,27 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     const cards = page.locator('.workout-card')
     await expect(cards.first()).toBeVisible()
     expect(await cards.count()).toBeGreaterThan(0)
+  })
+
+  test('Мужской род в онбординге → кнопка «Я сделал» (без «а»)', async ({ page }) => {
+    await openApp(page)
+    await navTo(page, NAV.onboarding)
+
+    // Проходим первые 5 шагов на дефолтах (они предвыбраны), меняем только род.
+    for (let i = 1; i <= 5; i += 1) {
+      await expect(page.getByText('Шаг ' + i + '/6')).toBeVisible()
+      await page.getByRole('button', { name: 'Дальше' }).click()
+    }
+    await expect(page.getByText('Шаг 6/6')).toBeVisible()
+    await page.locator('.option:has(strong:text-is("Мужской род"))').click()
+    await page.getByRole('button', { name: 'Показать мою подборку' }).click()
+    await expect(page.getByRole('heading', { name: 'Подобрано для тебя' })).toBeVisible()
+
+    // Открываем free-тренировку и проверяем мужскую форму кнопки.
+    await navTo(page, NAV.catalog)
+    const freeCard = page.locator('.workout-card', { has: page.locator('.pill.free') }).first()
+    await freeCard.click()
+    await expect(page.getByRole('button', { name: 'Я сделал', exact: true })).toBeVisible()
   })
 
   test('Профиль без premium: «Подписка не активна»', async ({ page }) => {

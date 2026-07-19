@@ -118,8 +118,24 @@ export interface OnboardingAnswers {
   level?: string
   /** Шаг 5: комфортная частота (RP-2). Опционально — старые профили без него. */
   frequency?: string
+  /**
+   * Грамматический род для формулировок («я сделала» / «я сделал»). Лейбл
+   * из квиза; пусто/'Женский род' → женский (аудитория преимущественно женская).
+   * Единственное, для чего он нужен — правильная форма глаголов в UI.
+   */
+  gender?: string
   /** Легаси-режим (до RP-2). Опционально: новый квиз его не собирает. */
   intensity?: string
+}
+
+/** Мужской род выбран в онбординге? По умолчанию (пусто) — женский. */
+export function isMaleGender(gender: string | undefined | null): boolean {
+  return gender === 'Мужской род'
+}
+
+/** Форма «я сделал(а)» под выбранный род. */
+export function doneVerbLabel(gender: string | undefined | null): string {
+  return isMaleGender(gender) ? 'Я сделал' : 'Я сделала'
 }
 
 /**

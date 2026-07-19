@@ -226,8 +226,8 @@ export interface OnboardingStepDef {
   exclusiveValue?: string
 }
 
-// 5-шаговый персонализационный квиз (RP-2). Порядок:
-// (1) цель, (2) уровень, (3) инвентарь, (4) длительность, (5) частота.
+// 6-шаговый персонализационный квиз (RP-2 + LP). Порядок:
+// (1) цель, (2) уровень, (3) инвентарь, (4) длительность, (5) частота, (6) обращение.
 export const onboardingSteps: OnboardingStepDef[] = [
   {
     key: 'goal',
@@ -289,6 +289,16 @@ export const onboardingSteps: OnboardingStepDef[] = [
       { value: 'Каждый день', hint: 'по чуть-чуть, без перегруза' },
     ],
   },
+  {
+    key: 'gender',
+    badge: 'обращение',
+    title: 'Как к тебе обращаться?',
+    description: 'Только ради правильных формулировок — больше ни на что не влияет.',
+    options: [
+      { value: 'Женский род', hint: '«я сделала»' },
+      { value: 'Мужской род', hint: '«я сделал»' },
+    ],
+  },
 ]
 
 export const defaultOnboardingAnswers: OnboardingAnswers = {
@@ -297,6 +307,7 @@ export const defaultOnboardingAnswers: OnboardingAnswers = {
   time: '15–20 минут',
   equipment: [NO_EQUIPMENT],
   frequency: '2–3 раза в неделю',
+  gender: 'Женский род',
 }
 
 // ---------------------------------------------------------------------------
@@ -310,5 +321,5 @@ export const catalogFilters = ['Все', '5–10 мин', 'Premium', 'Нович
 export const paywallFeatures = [
   '3 мини-плана на 5–7 дней',
   'Premium-каталог тренировок',
-  'Избранное, история и отметка “Я сделала”',
+  'Избранное, история и отметки о занятиях',
 ]

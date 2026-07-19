@@ -17,6 +17,7 @@ import type {
   WorkoutFeedbackRating,
   WorkoutLevel,
 } from '@refiesse-fit/shared'
+import { doneVerbLabel } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
 import {
@@ -506,6 +507,9 @@ function App() {
     data?.workouts.find((workout) => workout.isPremium) ??
     null
 
+  // Формулировка «Я сделал(а)» под выбранный в онбординге род (по умолчанию — женский).
+  const doneLabel = doneVerbLabel(data?.me.onboarding?.gender)
+
   return (
     <main className="board">
       {showDevNav && (
@@ -567,6 +571,7 @@ function App() {
               )}
               {screen === 'workout' && workoutForDetail && (
                 <WorkoutScreen
+                  doneLabel={doneLabel}
                   go={go}
                   isFavorite={data.favorites.includes(workoutForDetail.slug)}
                   onDone={markWorkoutDone}
@@ -592,6 +597,7 @@ function App() {
               {screen === 'success' && <SuccessScreen data={data} go={go} />}
               {screen === 'progress' && (
                 <ProgressScreen
+                  doneLabel={doneLabel}
                   onDone={() => {
                     const slug = data.workoutOfDay?.slug
                     if (slug) {
@@ -1049,6 +1055,7 @@ function CatalogScreen({
 }
 
 function WorkoutScreen({
+  doneLabel,
   go,
   isFavorite,
   onDone,
@@ -1056,6 +1063,7 @@ function WorkoutScreen({
   showToast,
   workout,
 }: {
+  doneLabel: string
   go: (screen: Screen) => void
   isFavorite: boolean
   onDone: (workoutSlug: string) => void
@@ -1113,7 +1121,7 @@ function WorkoutScreen({
         }}
         type="button"
       >
-        Я сделала
+        {doneLabel}
       </button>
     </section>
   )
@@ -1312,9 +1320,11 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
 }
 
 function ProgressScreen({
+  doneLabel,
   onDone,
   progress,
 }: {
+  doneLabel: string
   onDone: () => void
   progress: ProgressOverview
 }) {
@@ -1336,7 +1346,7 @@ function ProgressScreen({
         <Stat value={`${summary.planProgress.done}/${summary.planProgress.total}`} label="план" />
       </div>
       <button className="cta lime full" onClick={onDone} type="button">
-        Я сделала тренировку
+        {doneLabel} тренировку
       </button>
       {recent.length > 0 && (
         <>
