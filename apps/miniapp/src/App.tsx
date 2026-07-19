@@ -662,15 +662,15 @@ function App() {
               {screen === 'success' && <SuccessScreen data={data} go={go} />}
               {screen === 'progress' && (
                 <ProgressScreen
-                  doneLabel={doneLabel}
                   initial={profileInitial(data.me)}
                   onProfile={() => go('profile')}
-                  onDone={() => {
-                    const slug = data.workoutOfDay?.slug
-                    if (slug) {
-                      markWorkoutDone(slug)
+                  onMark={() => {
+                    // Отметка «сделала» живёт на экране тренировки, где есть
+                    // конкретный субъект: ведём на сегодняшнюю практику (или каталог).
+                    if (data.workoutOfDay) {
+                      openWorkout(data.workoutOfDay)
                     } else {
-                      showToast('Выберите тренировку в каталоге')
+                      go('catalog')
                     }
                   }}
                   progress={data.progress}
@@ -1421,15 +1421,13 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
 }
 
 function ProgressScreen({
-  doneLabel,
   initial,
-  onDone,
+  onMark,
   onProfile,
   progress,
 }: {
-  doneLabel: string
   initial: string
-  onDone: () => void
+  onMark: () => void
   onProfile: () => void
   progress: ProgressOverview
 }) {
@@ -1459,8 +1457,8 @@ function ProgressScreen({
         />
         <Stat value={`${summary.planProgress.done}/${summary.planProgress.total}`} label="план" />
       </div>
-      <button className="cta lime full" onClick={onDone} type="button">
-        {doneLabel} тренировку
+      <button className="cta full" onClick={onMark} type="button">
+        Отметить практику
       </button>
       {recent.length > 0 && (
         <>
