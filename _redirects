@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA-fallback: любой путь отдаёт index.html (код 200),
+# чтобы прямой переход/перезагрузка на вложенном URL не давали 404.
+# Файл из public/ копируется в dist/ при сборке. GitHub Pages его игнорирует.
+/*    /index.html   200
