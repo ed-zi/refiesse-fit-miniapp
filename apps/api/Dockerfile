@@ -31,6 +31,8 @@ COPY prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm install --omit=dev --no-audit --no-fund
 COPY src ./src
+# Статика админки (GET /admin/ui читает public/admin.html через import.meta.url).
+COPY public ./public
 # Генерируем клиент в src/generated/prisma (см. generator в schema.prisma).
 RUN npx prisma generate
 
@@ -41,6 +43,7 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src ./src
+COPY --from=build /app/public ./public
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh && chown -R node:node /app
 USER node
