@@ -56,6 +56,8 @@ export interface ApiClient {
   getFavorites(): Promise<string[]>
   /** Создаёт платёж провайдера (ЮKassa) и возвращает URL страницы оплаты. */
   createPayment(): Promise<{ confirmationUrl: string }>
+  /** Персональная подборка: ранжированные тренировки + рекомендованный план. */
+  getRecommendations(): Promise<{ workouts: Workout[]; recommendedPlan: Program | null }>
 }
 
 /** Ошибка API с машинным кодом (для UI-состояний и логики повторов). */
@@ -173,6 +175,19 @@ function createMockApiClient(): ApiClient {
       // В прототипе оплата «проходит» сразу: возвращаем фиктивный URL,
       // App в mock-режиме имитирует немедленный доступ (paywall → success).
       Promise.resolve({ confirmationUrl: 'https://example.test/mock-payment' }),
+    getRecommendations: () => {
+      // Имитация серверного скоринга: ставим совпадения по цели/уровню
+      // сохранённого подбора вперёд, режем до топ-4. План — первый из mock.
+      const goal = onboarding?.goal
+      const ranked = [...mockWorkouts].sort((a, b) => {
+        const score = (workout: Workout) => (goal && workout.goal === goal ? 0 : 1)
+        return score(a) - score(b)
+      })
+      return Promise.resolve({
+        workouts: ranked.slice(0, 4),
+        recommendedPlan: mockPrograms[0] ?? null,
+      })
+    },
   }
 }
 
@@ -348,6 +363,8 @@ function createHttpApiClient(baseUrl: string): ApiClient {
     },
     createPayment: () =>
       request<{ confirmationUrl: string }>('/api/payments/create', { method: 'POST' }),
+    getRecommendations: () =>
+      request<{ workouts: Workout[]; recommendedPlan: Program | null }>('/recommendations'),
   }
 }
 

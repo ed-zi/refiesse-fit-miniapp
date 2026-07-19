@@ -32,6 +32,7 @@ import './App.css'
 type Screen =
   | 'home'
   | 'onboarding'
+  | 'recommendations'
   | 'catalog'
   | 'workout'
   | 'plans'
@@ -44,6 +45,7 @@ type Screen =
 const steps: Array<{ id: Screen; label: string }> = [
   { id: 'home', label: 'Home: быстрое действие на сегодня' },
   { id: 'onboarding', label: 'Подбор: понять состояние' },
+  { id: 'recommendations', label: 'Подборка: персональные рекомендации' },
   { id: 'catalog', label: 'Каталог: выбрать тренировку' },
   { id: 'workout', label: 'Тренировка: понять и начать' },
   { id: 'plans', label: 'Планы: система на 5–7 дней' },
@@ -53,6 +55,12 @@ const steps: Array<{ id: Screen; label: string }> = [
   { id: 'progress', label: 'Прогресс: удержание без давления' },
   { id: 'profile', label: 'Профиль: подписка и настройки' },
 ]
+
+/** Персональная подборка с рекомендательного API (GET /recommendations). */
+type Recommendations = {
+  workouts: Workout[]
+  recommendedPlan: Program | null
+}
 
 /** Все данные экранов, полученные через слой данных (mock или HTTP). */
 type AppData = {
@@ -117,6 +125,8 @@ function App() {
   const [selectedWorkoutSlug, setSelectedWorkoutSlug] = useState<string | null>(null)
   const [workoutDetail, setWorkoutDetail] = useState<Workout | null>(null)
   const [payPending, setPayPending] = useState(false)
+  const [recommendations, setRecommendations] = useState<Recommendations | null>(null)
+  const [recsLoading, setRecsLoading] = useState(false)
 
   // Единая машина состояний загрузки: loading → error | ready (retry через reloadKey).
   useEffect(() => {
@@ -143,9 +153,10 @@ function App() {
           favorites,
           catalogFiltered: false,
         })
-        // «Изменить подбор» и повторный онбординг начинаются с сохранённых ответов.
+        // «Изменить подбор» и повторный квиз стартуют с сохранённых ответов;
+        // старые профили без level/frequency добираются дефолтами.
         if (me.onboarding) {
-          setOnboardingAnswers(me.onboarding)
+          setOnboardingAnswers({ ...defaultOnboardingAnswers, ...me.onboarding })
         }
       })
       .catch((error: unknown) => {
@@ -185,6 +196,24 @@ function App() {
       next = 'paywall'
     }
     goUnchecked(next)
+    // Прямой заход на подборку (в т.ч. из левой панели прототипа) — подтянуть,
+    // если ещё не загружали.
+    if (next === 'recommendations' && data && !recommendations && !recsLoading) {
+      void loadRecommendations()
+    }
+  }
+
+  /** Загрузка персональной подборки с рекомендательного API. */
+  function loadRecommendations() {
+    setRecsLoading(true)
+    return apiClient
+      .getRecommendations()
+      .then((recs) => setRecommendations(recs))
+      .catch(() => {
+        // Пустая подборка вместо вечной загрузки — экран покажет мягкую заглушку.
+        setRecommendations({ workouts: [], recommendedPlan: null })
+      })
+      .finally(() => setRecsLoading(false))
   }
 
   function retryLoad() {
@@ -337,26 +366,22 @@ function App() {
     }
   }
 
-  /** Завершение онбординга: сохранить подбор и отфильтровать каталог. */
+  /** Завершение квиза: сохранить подбор и показать персональную подборку. */
   function completeOnboarding(answers: OnboardingAnswers) {
-    go('catalog')
+    // Оптимистично фиксируем ответы (профиль/предзаполнение) и уходим на экран
+    // подборки; свежие рекомендации грузим ниже.
+    setData((current) =>
+      current ? { ...current, me: { ...current.me, onboarding: answers } } : current,
+    )
+    setRecommendations(null)
+    goUnchecked('recommendations')
     void (async () => {
       try {
         await apiClient.saveOnboarding(answers)
-        const catalog = await apiClient.getCatalog(onboardingToCatalogQuery(answers))
-        setData((current) =>
-          current
-            ? {
-                ...current,
-                workouts: catalog.workouts,
-                catalogFiltered: true,
-                me: { ...current.me, onboarding: answers },
-              }
-            : current,
-        )
       } catch {
         showToast('Подбор не сохранился. Попробуйте ещё раз')
       }
+      void loadRecommendations()
     })()
   }
 
@@ -417,7 +442,9 @@ function App() {
 
   function editOnboarding() {
     if (data?.me.onboarding) {
-      setOnboardingAnswers(data.me.onboarding)
+      // Старые профили без level/frequency — добираем дефолтами, чтобы все
+      // 5 шагов были предзаполнены и ничего не падало.
+      setOnboardingAnswers({ ...defaultOnboardingAnswers, ...data.me.onboarding })
     }
     go('onboarding')
   }
@@ -479,6 +506,15 @@ function App() {
                   stepIndex={onboardingStep}
                   setAnswers={setOnboardingAnswers}
                   setStepIndex={setOnboardingStep}
+                />
+              )}
+              {screen === 'recommendations' && (
+                <RecommendationsScreen
+                  data={data}
+                  go={go}
+                  loading={recsLoading}
+                  openWorkout={openWorkout}
+                  recommendations={recommendations}
                 />
               )}
               {screen === 'catalog' && (
@@ -707,7 +743,7 @@ function answerLabel(step: OnboardingStepDef, answers: OnboardingAnswers): strin
   if (Array.isArray(current)) {
     return current.length > 0 ? current.join(', ') : NO_EQUIPMENT
   }
-  return current
+  return current ?? '—'
 }
 
 function OnboardingScreen({
@@ -804,7 +840,90 @@ function OnboardingScreen({
         ))}
       </div>
       <button className="cta full" onClick={next} type="button">
-        {isLastStep ? 'Показать тренировки' : 'Дальше'}
+        {isLastStep ? 'Показать мою подборку' : 'Дальше'}
+      </button>
+    </section>
+  )
+}
+
+/** Персональная подборка после квиза — рендерит ранжированный сервером список. */
+function RecommendationsScreen({
+  data,
+  go,
+  loading,
+  openWorkout,
+  recommendations,
+}: {
+  data: AppData
+  go: (screen: Screen) => void
+  loading: boolean
+  openWorkout: (workout: Workout) => void
+  recommendations: Recommendations | null
+}) {
+  const goal = data.me.onboarding?.goal
+  const plan = recommendations?.recommendedPlan ?? null
+
+  return (
+    <section className="screen">
+      <TopBar title="Подборка" right="✦" onProfile={() => go('profile')} />
+      <div className="hero">
+        <div className="badge">персонально</div>
+        <h2>Подобрано для тебя</h2>
+        <p>
+          {goal
+            ? `Мягкие практики под “${goal}” — от коротких к глубже.`
+            : 'Мягкие практики под ваш подбор — от коротких к глубже.'}
+        </p>
+      </div>
+
+      {loading && !recommendations ? (
+        <>
+          <div className="skeleton sk-card" />
+          <div className="skeleton sk-card" />
+          <div className="skeleton sk-card" />
+        </>
+      ) : recommendations && recommendations.workouts.length > 0 ? (
+        recommendations.workouts.map((workout) => (
+          <WorkoutCard
+            isPremium={workout.isPremium}
+            key={workout.slug}
+            meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
+            onClick={() => openWorkout(workout)}
+            title={workout.title}
+            thumb={workout.thumbColor}
+          />
+        ))
+      ) : (
+        <div className="empty-state">
+          <h3>Пока собираем</h3>
+          <p>
+            Персональная подборка появится чуть позже. А пока можно открыть весь
+            каталог мягких практик.
+          </p>
+        </div>
+      )}
+
+      {plan && (
+        <>
+          <div className="section-title">
+            <h3>Рекомендуем план</h3>
+            <small>{plan.daysTotal} дней</small>
+          </div>
+          <ProgramCard
+            note={plan.description ?? null}
+            onClick={() => go(plan.isPremium && !data.me.access.isPremium ? 'paywall' : 'plans')}
+            percent={0}
+            title={plan.title}
+          />
+        </>
+      )}
+
+      <button
+        className="cta secondary full stacked"
+        onClick={() => go('catalog')}
+        type="button"
+      >
+        Открыть весь каталог
       </button>
     </section>
   )
