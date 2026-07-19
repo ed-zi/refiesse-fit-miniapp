@@ -7,13 +7,22 @@ import { AppError } from '../errors.ts';
 import type { OnboardingAnswers, UserProfile } from '../types.ts';
 import type { Prisma, User } from '../generated/prisma/client.ts';
 
-/** = shared OnboardingAnswers. Используется и для body PUT, и для чтения JSON из БД. */
+/**
+ * = shared OnboardingAnswers (расширено под квиз RP-1). Используется и для body
+ * PUT, и для чтения JSON из БД. Совместимость: старые профили с intensity (и без
+ * level/frequency) принимаются; новые с level/frequency (без intensity) — тоже.
+ */
 const onboardingSchema = z.object({
   goal: z.string().min(1),
   time: z.string().min(1),
   /** Массив строк; пустой = «без инвентаря» (валидное состояние). */
   equipment: z.array(z.string()),
-  intensity: z.string().min(1),
+  /** Легаси-поле старого квиза — больше не обязательно. */
+  intensity: z.string().optional(),
+  /** Новый квиз: уровень («Новичок»/«Уверенный»/«Продвинутый»). */
+  level: z.string().optional(),
+  /** Новый квиз: частота занятий. */
+  frequency: z.string().optional(),
 });
 
 /** Безопасно читает onboarding-JSON из БД; отсутствие/повреждённое значение → null. */

@@ -20,6 +20,7 @@ import { registerMeRoutes } from './routes/me.ts';
 import { registerPaymentRoutes } from './routes/payments.ts';
 import { registerPlanRoutes } from './routes/plans.ts';
 import { registerProgressRoutes } from './routes/progress.ts';
+import { registerRecommendationRoutes } from './routes/recommendations.ts';
 import { registerTributeRoutes } from './routes/tribute.ts';
 import type { PrismaClient } from './generated/prisma/client.ts';
 
@@ -164,6 +165,7 @@ export async function buildApp(
   registerCatalogRoutes(app);
   registerPlanRoutes(app);
   registerProgressRoutes(app);
+  registerRecommendationRoutes(app);
   registerFavoriteRoutes(app);
   registerAccessRoutes(app);
   registerAdminRoutes(app);

@@ -26,13 +26,18 @@ export interface AccessStatus {
   expiresAt: string | null;
 }
 
-/** = shared OnboardingAnswers (результат «Подбора»). */
+/** = shared OnboardingAnswers (расширено под квиз RP-1). */
 export interface OnboardingAnswers {
   goal: string;
   time: string;
   /** Мультивыбор; пустой массив = «без инвентаря» (валидное состояние). */
   equipment: string[];
-  intensity: string;
+  /** Легаси старого квиза — необязательно. */
+  intensity?: string;
+  /** Новый квиз: уровень. */
+  level?: string;
+  /** Новый квиз: частота. */
+  frequency?: string;
 }
 
 /** = shared UserProfile (плоский ответ GET /me). */

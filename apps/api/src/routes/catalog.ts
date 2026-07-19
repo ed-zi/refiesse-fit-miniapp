@@ -11,6 +11,7 @@ import {
   type WorkoutCardDto,
   type WorkoutDetailDto,
 } from '../mappers.ts';
+import { GOAL_TO_CATEGORY_SLUG } from '../recommend.ts';
 import { parseOnboarding } from './me.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
 
@@ -35,17 +36,6 @@ interface CatalogResponse {
   categories: CategoryDto[];
   workouts: WorkoutCardDto[];
 }
-
-/**
- * Маппинг goal из онбординга («Что сейчас нужно телу?», значения из
- * apps/miniapp onboardingSteps) → slug категории (content-matrix §2).
- */
-const GOAL_TO_CATEGORY_SLUG: Record<string, string> = {
-  'Шея и плечи зажаты': 'spina',
-  'Поясница устала': 'lower-back',
-  'Кор и живот': 'kor',
-  'Расслабиться перед сном': 'relaxation',
-};
 
 /** Номер дня в году (UTC, 1..366) — ключ детерминированной ротации. */
 function utcDayOfYear(now: Date): number {
