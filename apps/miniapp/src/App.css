@@ -337,6 +337,13 @@ p,
   margin-top: 12px;
 }
 
+/* Подпись под плитками прогресса: уточняет период недельных метрик. */
+.stats-note {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* Недельный чек-ин (WEEK-1): мягкая карточка на Home. */
 .checkin-card {
   margin: 14px 0;

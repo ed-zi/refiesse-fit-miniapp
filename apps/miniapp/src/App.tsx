@@ -1457,6 +1457,7 @@ function ProgressScreen({
         />
         <Stat value={`${summary.planProgress.done}/${summary.planProgress.total}`} label="план" />
       </div>
+      <p className="stats-note">Тренировки и минуты — за эту неделю.</p>
       <button className="cta full" onClick={onMark} type="button">
         Отметить практику
       </button>
