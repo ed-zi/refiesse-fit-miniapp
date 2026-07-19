@@ -171,25 +171,25 @@
 
 .hero {
   background: var(--lav);
-  border-radius: 32px;
-  padding: 22px;
+  border-radius: 28px;
+  padding: 18px 20px;
   position: relative;
   overflow: hidden;
   margin-bottom: 14px;
 }
 
 .hero-tall {
-  min-height: 210px;
+  min-height: 168px;
 }
 
 .hero::after {
   content: '';
   position: absolute;
-  width: 185px;
-  height: 185px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
-  right: -54px;
-  bottom: -54px;
+  right: -46px;
+  bottom: -46px;
   background: var(--lime);
 }
 
@@ -208,7 +208,7 @@
   color: var(--purple);
   font-size: 11px;
   font-weight: 900;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 h2 {

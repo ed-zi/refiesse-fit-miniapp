@@ -88,8 +88,11 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     // Автопереход на экран прогресса: тренировки ≥ 1, минуты > 0.
     await expect(page.getByRole('heading', { name: 'Даже 10 минут считаются' })).toBeVisible()
 
-    const workoutsStat = page.locator('.stat', { hasText: 'тренировки' }).locator('b')
-    const minutesStat = page.locator('.stat', { hasText: 'минуты' }).locator('b')
+    // Порядок плиток фиксирован: тренировки, минуты, дни подряд, план.
+    // Матчим по позиции, а не по форме слова (она плюрализуется: 1 минута /
+    // 12 минут / 62 минуты), иначе локатор ломается на числах вроде 12.
+    const workoutsStat = page.locator('.stats .stat').nth(0).locator('b')
+    const minutesStat = page.locator('.stats .stat').nth(1).locator('b')
     await expect(workoutsStat).toBeVisible()
     expect(Number(await workoutsStat.innerText())).toBeGreaterThanOrEqual(1)
     expect(Number(await minutesStat.innerText())).toBeGreaterThan(0)

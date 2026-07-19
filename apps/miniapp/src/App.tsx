@@ -24,7 +24,6 @@ import { openExternalLink } from './telegram'
 import {
   NO_EQUIPMENT,
   type OnboardingStepDef,
-  catalogFilters,
   defaultOnboardingAnswers,
   onboardingSteps,
   paywallFeatures,
@@ -85,13 +84,32 @@ const levelPillLabels: Record<WorkoutLevel, string> = {
 }
 
 const levelFactLabels: Record<WorkoutLevel, string> = {
-  beginner: 'easy',
-  medium: 'medium',
-  advanced: 'hard',
+  beginner: 'лёгкий',
+  medium: 'средний',
+  advanced: 'продвинутый',
 }
 
 function equipmentLabel(workout: Workout): string {
   return workout.equipment.length > 0 ? workout.equipment.join(', ') : 'без инвентаря'
+}
+
+/** Значение факта «инвентарь»: «нет», если ничего не нужно, иначе количество. */
+function equipmentFactValue(workout: Workout): string {
+  return workout.equipment.length === 0 ? 'нет' : String(workout.equipment.length)
+}
+
+/** Русская плюрализация: plural(2, 'минута','минуты','минут') → 'минуты'. */
+function plural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few
+  return many
+}
+
+/** Инициал для аватара профиля в шапке. */
+function profileInitial(me: UserProfile): string {
+  return me.firstName.charAt(0).toUpperCase() || 'Я'
 }
 
 /** Закрыт ли контент: сервер знает лучше (isLocked), иначе — по isPremium. */
@@ -645,6 +663,8 @@ function App() {
               {screen === 'progress' && (
                 <ProgressScreen
                   doneLabel={doneLabel}
+                  initial={profileInitial(data.me)}
+                  onProfile={() => go('profile')}
                   onDone={() => {
                     const slug = data.workoutOfDay?.slug
                     if (slug) {
@@ -773,7 +793,7 @@ function HomeScreen({
 
   return (
     <section className="screen">
-      <TopBar onProfile={() => go('profile')} />
+      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
       <div className="hero hero-tall">
         <div className="badge">
           {data.me.access.isPremium && accessUntil
@@ -1005,7 +1025,7 @@ function RecommendationsScreen({
 
   return (
     <section className="screen">
-      <TopBar title="Подборка" right="✦" onProfile={() => go('profile')} />
+      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
       <div className="hero">
         <div className="badge">персонально</div>
         <h2>Подобрано для тебя</h2>
@@ -1087,27 +1107,12 @@ function CatalogScreen({
 }) {
   return (
     <section className="screen">
-      <TopBar title="Каталог" right="⌕" onProfile={() => go('profile')} />
+      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
       <h2>Найти по состоянию</h2>
       <p className="lead">
         Тренировки собраны по целям: шея, поясница, кор, мобильность,
         расслабление.
       </p>
-      <div className="filter-row">
-        <div className="search">
-          Поиск по состоянию <span className="soon">скоро</span>
-        </div>
-        <button className="filter" type="button" aria-label="Фильтры">
-          ≡
-        </button>
-      </div>
-      <div className="chips">
-        {catalogFilters.map((chip, index) => (
-          <button className={`chip ${index === 0 ? 'active' : ''}`} key={chip} type="button">
-            {chip}
-          </button>
-        ))}
-      </div>
       {data.catalogFiltered && (
         <div className="filter-note">
           <span>Показан подбор под ваше состояние</span>
@@ -1184,7 +1189,7 @@ function WorkoutScreen({
       <p className="lead">{workout.description}</p>
       <div className="facts">
         <Fact value={String(workout.durationMin)} label="мин" />
-        <Fact value={String(workout.equipment.length)} label="инвентарь" />
+        <Fact value={equipmentFactValue(workout)} label="инвентарь" />
         <Fact value={levelFactLabels[workout.level]} label="уровень" />
       </div>
       <div className="note">
@@ -1283,7 +1288,7 @@ function PlansScreen({
 
   return (
     <section className="screen">
-      <TopBar title="Планы" right="◇" />
+      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
       <h2>Идти по системе</h2>
       <p className="lead">Планы на 5–7 дней помогают не искать случайные упражнения.</p>
       {freePlan && (
@@ -1317,7 +1322,7 @@ function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: 
       <p className="lead">{workout.description}</p>
       <div className="facts">
         <Fact value={String(workout.durationMin)} label="мин" />
-        <Fact value={String(workout.equipment.length)} label="инвентарь" />
+        <Fact value={equipmentFactValue(workout)} label="инвентарь" />
         <Fact value={levelFactLabels[workout.level]} label="уровень" />
       </div>
       <div className="paywall small-paywall">
@@ -1417,11 +1422,15 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
 
 function ProgressScreen({
   doneLabel,
+  initial,
   onDone,
+  onProfile,
   progress,
 }: {
   doneLabel: string
+  initial: string
   onDone: () => void
+  onProfile: () => void
   progress: ProgressOverview
 }) {
   const { summary, entries } = progress
@@ -1429,16 +1438,25 @@ function ProgressScreen({
 
   return (
     <section className="screen">
-      <TopBar title="Прогресс" right="↗" />
+      <TopBar right={initial} onProfile={onProfile} />
       <div className="hero">
         <div className="badge">эта неделя</div>
         <h2>Даже 10 минут считаются</h2>
         <p>Прогресс поддерживает регулярность, но не наказывает за пропуски.</p>
       </div>
       <div className="stats">
-        <Stat value={String(summary.workouts)} label="тренировки" />
-        <Stat value={String(summary.minutes)} label="минуты" />
-        <Stat value={String(summary.streakDays)} label="дня подряд" />
+        <Stat
+          value={String(summary.workouts)}
+          label={plural(summary.workouts, 'тренировка', 'тренировки', 'тренировок')}
+        />
+        <Stat
+          value={String(summary.minutes)}
+          label={plural(summary.minutes, 'минута', 'минуты', 'минут')}
+        />
+        <Stat
+          value={String(summary.streakDays)}
+          label={`${plural(summary.streakDays, 'день', 'дня', 'дней')} подряд`}
+        />
         <Stat value={`${summary.planProgress.done}/${summary.planProgress.total}`} label="план" />
       </div>
       <button className="cta lime full" onClick={onDone} type="button">
@@ -1593,7 +1611,6 @@ function WorkoutCard({
             </span>
           ))}
         </span>
-        <small>{isPremium ? 'Открыть →' : 'Начать →'}</small>
       </span>
     </button>
   )
