@@ -175,14 +175,29 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
     ]);
 
     if (progressCount > 0 || programDayCount > 0 || favoriteCount > 0) {
+      // Русское склонение: 1 день / 2 дня / 5 дней (и т.п.).
+      const plural = (n: number, one: string, few: string, many: string): string => {
+        const mod100 = n % 100;
+        const mod10 = n % 10;
+        if (mod100 >= 11 && mod100 <= 14) return many;
+        if (mod10 === 1) return one;
+        if (mod10 >= 2 && mod10 <= 4) return few;
+        return many;
+      };
       const reasons: string[] = [];
-      if (progressCount > 0) reasons.push(`${progressCount} выполнений`);
-      if (programDayCount > 0) reasons.push(`входит в ${programDayCount} дней планов`);
-      if (favoriteCount > 0) reasons.push(`${favoriteCount} в избранном`);
+      if (progressCount > 0) {
+        reasons.push(`${progressCount} ${plural(progressCount, 'выполнение', 'выполнения', 'выполнений')}`);
+      }
+      if (programDayCount > 0) {
+        reasons.push(`входит в ${programDayCount} ${plural(programDayCount, 'день', 'дня', 'дней')} планов`);
+      }
+      if (favoriteCount > 0) {
+        reasons.push(`${favoriteCount} в избранном`);
+      }
       throw new AppError(
         409,
         'WORKOUT_REFERENCED',
-        `Нельзя удалить: ${reasons.join(', ')}. Снимите с публикации.`,
+        `Нельзя удалить: ${reasons.join(', ')}. Снимите с публикации или уберите из плана.`,
       );
     }
 
