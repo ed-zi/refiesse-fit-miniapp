@@ -202,6 +202,8 @@ export const mockUser: UserProfile = {
     expiresAt: '2026-07-18T00:00:00.000Z',
   },
   reminders: { optIn: false, hour: null },
+  // В прототипе показываем недельный чек-ин, чтобы карточка была видна.
+  weeklyCheckin: { due: true },
 }
 
 // ---------------------------------------------------------------------------

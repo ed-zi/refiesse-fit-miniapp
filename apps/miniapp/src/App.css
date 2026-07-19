@@ -307,6 +307,26 @@ p,
   margin-top: 12px;
 }
 
+/* Недельный чек-ин (WEEK-1): мягкая карточка на Home. */
+.checkin-card {
+  margin: 14px 0;
+  padding: 16px 16px 18px;
+  border-radius: 22px;
+  border: 1px solid #e3dcff;
+  background: #f6f3ff;
+}
+
+.checkin-card h3 {
+  margin: 8px 0 2px;
+}
+
+.checkin-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .section-title {
   display: flex;
   justify-content: space-between;

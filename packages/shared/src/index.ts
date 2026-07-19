@@ -194,6 +194,14 @@ export interface ReminderSettings {
   hour: number | null
 }
 
+/** Ответ на недельный лёгкий чек-ин «Как прошла неделя?» (WEEK-1). */
+export type WeeklyCheckinAnswer = 'better' | 'same' | 'harder'
+
+/** Статус недельного чек-ина (WEEK-1). */
+export interface WeeklyCheckinStatus {
+  due: boolean
+}
+
 /** Профиль пользователя Mini App (ответ /me). */
 export interface UserProfile {
   id: string
@@ -207,6 +215,8 @@ export interface UserProfile {
   access: AccessStatus
   /** Мягкие напоминания (MOTIV-1). */
   reminders: ReminderSettings
+  /** Недельный лёгкий чек-ин (WEEK-1). */
+  weeklyCheckin: WeeklyCheckinStatus
 }
 
 // ---------------------------------------------------------------------------

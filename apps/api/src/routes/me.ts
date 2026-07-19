@@ -4,6 +4,12 @@ import { getAccessStatus } from '../access.ts';
 import { isEffectiveAdmin } from '../adminAuth.ts';
 import { authenticate } from '../auth.ts';
 import { AppError } from '../errors.ts';
+import {
+  appendCheckin,
+  isCheckinDue,
+  parseProfileSignals,
+  type CheckinAnswer,
+} from '../livingProfile.ts';
 import type { OnboardingAnswers, UserProfile } from '../types.ts';
 import type { Prisma, User } from '../generated/prisma/client.ts';
 
@@ -46,6 +52,9 @@ async function toUserProfile(app: FastifyInstance, user: User): Promise<UserProf
     access: await getAccessStatus(app.prisma, user.id),
     isAdmin: isEffectiveAdmin(user, app.config.adminTelegramIds),
     reminders: { optIn: user.reminderOptIn, hour: user.reminderHour },
+    weeklyCheckin: {
+      due: isCheckinDue(parseProfileSignals(user.profileSignals), user.createdAt),
+    },
   };
 }
 
@@ -53,6 +62,11 @@ async function toUserProfile(app: FastifyInstance, user: User): Promise<UserProf
 const remindersSchema = z.object({
   optIn: z.boolean(),
   hour: z.number().int().min(0).max(23).nullable().optional(),
+});
+
+/** Тело POST /checkin: ответ на недельный лёгкий чек-ин. */
+const checkinSchema = z.object({
+  answer: z.enum(['better', 'same', 'harder']),
 });
 
 export function registerMeRoutes(app: FastifyInstance): void {
@@ -110,6 +124,36 @@ export function registerMeRoutes(app: FastifyInstance): void {
       });
 
       return { reminders: { optIn: user.reminderOptIn, hour: user.reminderHour } };
+    },
+  );
+
+  /**
+   * POST /checkin — недельный лёгкий чек-ин (WEEK-1). Копится в profileSignals
+   * и мягко влияет на сложность в подборке. Возвращает due:false (на неделю
+   * вопрос больше не показываем).
+   */
+  app.post(
+    '/checkin',
+    { preHandler: authenticate },
+    async (request): Promise<{ ok: true; weeklyCheckin: { due: boolean } }> => {
+      const { answer } = checkinSchema.parse(request.body ?? {});
+
+      const user = await app.prisma.user.findUnique({
+        where: { id: request.user.userId },
+        select: { profileSignals: true },
+      });
+      const signals = parseProfileSignals(user?.profileSignals);
+      const updated = appendCheckin(signals, {
+        answer: answer as CheckinAnswer,
+        at: new Date().toISOString(),
+      });
+
+      await app.prisma.user.update({
+        where: { id: request.user.userId },
+        data: { profileSignals: updated as unknown as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, weeklyCheckin: { due: false } };
     },
   );
 }

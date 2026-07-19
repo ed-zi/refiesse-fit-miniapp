@@ -53,6 +53,8 @@ export interface UserProfile {
   isAdmin: boolean;
   /** Мягкие напоминания (MOTIV-1): opt-in + час (0..23 по МСК) или null. */
   reminders: { optIn: boolean; hour: number | null };
+  /** Недельный лёгкий чек-ин (WEEK-1): пора ли показать вопрос. */
+  weeklyCheckin: { due: boolean };
 }
 
 export interface AuthResponse {

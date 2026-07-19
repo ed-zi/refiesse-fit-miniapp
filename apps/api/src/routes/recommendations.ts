@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { hasAccess } from '../access.ts';
 import { authenticate } from '../auth.ts';
 import { toProgramDto, toWorkoutCardDto, type ProgramDto, type WorkoutCardDto } from '../mappers.ts';
-import { computeDifficultyBias, parseProfileSignals } from '../livingProfile.ts';
+import { computeDifficultyBias, parseProfileSignals, weeklyEasing } from '../livingProfile.ts';
 import {
   buildProfileFromOnboarding,
   pickRecommendedPlan,
@@ -49,8 +49,12 @@ export function registerRecommendationRoutes(app: FastifyInstance): void {
         hasAccess(app.prisma, request.user.userId),
       ]);
 
-      // Профиль подбора из квиза + сдвиг сложности из живого профиля (LP-1).
-      const bias = computeDifficultyBias(parseProfileSignals(user?.profileSignals));
+      // Профиль подбора из квиза + сдвиг сложности из живого профиля: пост-
+      // тренировочные ответы (LP-1) и недельный чек-ин (WEEK-1). Мягко — сумму
+      // держим в пределах ±1, чтобы не бросало из крайности в крайность.
+      const signals = parseProfileSignals(user?.profileSignals);
+      const rawBias = computeDifficultyBias(signals) + weeklyEasing(signals);
+      const bias = Math.max(-1, Math.min(1, rawBias));
       const profile = withDifficultyBias(buildProfileFromOnboarding(user?.onboarding), bias);
 
       // Скоринг работает по categorySlug — прокидываем его рядом с prisma-строкой.

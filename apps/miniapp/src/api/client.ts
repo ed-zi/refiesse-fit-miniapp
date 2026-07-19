@@ -21,6 +21,8 @@ import type {
   ProgressSummary,
   ReminderSettings,
   UserProfile,
+  WeeklyCheckinAnswer,
+  WeeklyCheckinStatus,
   Workout,
   WorkoutFeedbackRating,
   WorkoutFeedbackResult,
@@ -55,6 +57,8 @@ export interface ApiClient {
   saveOnboarding(answers: OnboardingAnswers): Promise<OnboardingAnswers>
   /** Мягкие напоминания (MOTIV-1): вкл/выкл + удобный час (0..23 по МСК). */
   updateReminders(optIn: boolean, hour: number | null): Promise<ReminderSettings>
+  /** Недельный лёгкий чек-ин (WEEK-1): «как прошла неделя». */
+  submitCheckin(answer: WeeklyCheckinAnswer): Promise<WeeklyCheckinStatus>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
   markDone(workoutSlug: string): Promise<ProgressSummary>
   /** Пост-тренировочный микро-вопрос «Как ощущалось?» → живой профиль (LP-1). */
@@ -98,6 +102,7 @@ function createMockApiClient(): ApiClient {
   }
   let onboarding: OnboardingAnswers | null = mockUser.onboarding
   let reminders: ReminderSettings = { ...mockUser.reminders }
+  let weeklyCheckin: WeeklyCheckinStatus = { ...mockUser.weeklyCheckin }
   let summary: ProgressSummary = { ...mockProgress, planProgress: { ...mockProgress.planProgress } }
   let entries: ProgressHistoryEntry[] = [...mockProgressEntries]
 
@@ -140,7 +145,7 @@ function createMockApiClient(): ApiClient {
         summary: { ...summary, planProgress: { ...summary.planProgress } },
         entries: [...entries],
       }),
-    getMe: () => Promise.resolve({ ...mockUser, onboarding, reminders }),
+    getMe: () => Promise.resolve({ ...mockUser, onboarding, reminders, weeklyCheckin }),
     getAccess: () => Promise.resolve({ ...mockUser.access }),
     saveOnboarding: (answers) => {
       onboarding = {
@@ -152,6 +157,10 @@ function createMockApiClient(): ApiClient {
     updateReminders: (optIn, hour) => {
       reminders = { optIn, hour: optIn ? hour : reminders.hour }
       return Promise.resolve({ ...reminders })
+    },
+    submitCheckin: () => {
+      weeklyCheckin = { due: false }
+      return Promise.resolve({ ...weeklyCheckin })
     },
     markDone: (workoutSlug) => {
       const workout = mockWorkouts.find((item) => item.slug === workoutSlug)
@@ -386,6 +395,13 @@ function createHttpApiClient(baseUrl: string): ApiClient {
         body: { optIn, hour },
       })
       return reminders
+    },
+    submitCheckin: async (answer) => {
+      const { weeklyCheckin } = await request<{ weeklyCheckin: WeeklyCheckinStatus }>('/checkin', {
+        method: 'POST',
+        body: { answer },
+      })
+      return weeklyCheckin
     },
     markDone: async (workoutSlug) => {
       const { summary } = await request<{ summary: ProgressSummary }>('/progress', {

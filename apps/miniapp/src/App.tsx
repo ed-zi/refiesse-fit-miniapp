@@ -13,6 +13,7 @@ import type {
   Program,
   ProgressOverview,
   UserProfile,
+  WeeklyCheckinAnswer,
   Workout,
   WorkoutFeedbackRating,
   WorkoutLevel,
@@ -497,6 +498,27 @@ function App() {
       })
   }
 
+  /** Недельный чек-ин (WEEK-1): сохранить ответ, скрыть карточку, освежить подбор. */
+  function submitCheckin(answer: WeeklyCheckinAnswer) {
+    // Оптимистично прячем карточку.
+    setData((current) =>
+      current ? { ...current, me: { ...current.me, weeklyCheckin: { due: false } } } : current,
+    )
+    void apiClient
+      .submitCheckin(answer)
+      .then((weeklyCheckin) => {
+        setData((current) =>
+          current ? { ...current, me: { ...current.me, weeklyCheckin } } : current,
+        )
+        // Ответ влияет на сложность — освежим подборку при следующем заходе.
+        setRecommendations(null)
+        showToast('Спасибо — учту в подборке')
+      })
+      .catch(() => {
+        showToast('Не получилось сохранить ответ')
+      })
+  }
+
   function editOnboarding() {
     if (data?.me.onboarding) {
       // Старые профили без level/frequency — добираем дефолтами, чтобы все
@@ -558,7 +580,14 @@ function App() {
           {!data && loadError && <ErrorScreen message={loadError} onRetry={retryLoad} />}
           {data && (
             <>
-              {screen === 'home' && <HomeScreen data={data} go={go} openWorkout={openWorkout} />}
+              {screen === 'home' && (
+                <HomeScreen
+                  data={data}
+                  go={go}
+                  openWorkout={openWorkout}
+                  onCheckin={submitCheckin}
+                />
+              )}
               {screen === 'onboarding' && (
                 <OnboardingScreen
                   answers={onboardingAnswers}
@@ -729,10 +758,12 @@ function HomeScreen({
   data,
   go,
   openWorkout,
+  onCheckin,
 }: {
   data: AppData
   go: (screen: Screen) => void
   openWorkout: (workout: Workout) => void
+  onCheckin: (answer: WeeklyCheckinAnswer) => void
 }) {
   const accessUntil = formatDayMonth(data.me.access.expiresAt)
   const workoutOfDay = data.workoutOfDay
@@ -754,6 +785,7 @@ function HomeScreen({
           Выберите состояние — я подберу мягкую тренировку на 10–20 минут.
         </p>
       </div>
+      {data.me.weeklyCheckin.due && <WeeklyCheckinCard onAnswer={onCheckin} />}
       <button className="cta full" onClick={() => go('onboarding')} type="button">
         Подобрать тренировку
       </button>
@@ -801,6 +833,37 @@ function HomeScreen({
         </>
       )}
     </section>
+  )
+}
+
+/**
+ * Недельный лёгкий чек-ин (WEEK-1). Мягкая карточка на Home раз в неделю:
+ * один вопрос о самочувствии, ответ влияет на сложность в подборке.
+ */
+function WeeklyCheckinCard({ onAnswer }: { onAnswer: (answer: WeeklyCheckinAnswer) => void }) {
+  const options: Array<{ answer: WeeklyCheckinAnswer; label: string }> = [
+    { answer: 'better', label: 'Полегче' },
+    { answer: 'same', label: 'Так же' },
+    { answer: 'harder', label: 'Тяжелее' },
+  ]
+  return (
+    <div className="checkin-card">
+      <div className="badge">чек-ин недели</div>
+      <h3>Как прошла неделя?</h3>
+      <p className="lead">Подстроим нагрузку — без правильных ответов.</p>
+      <div className="checkin-options">
+        {options.map((option) => (
+          <button
+            className="chip"
+            key={option.answer}
+            onClick={() => onAnswer(option.answer)}
+            type="button"
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

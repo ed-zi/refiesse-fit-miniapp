@@ -2,11 +2,16 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
 import {
+  appendCheckin,
   appendFeedback,
+  CHECKIN_CAP,
   computeDifficultyBias,
   emptyProfileSignals,
   FEEDBACK_CAP,
+  isCheckinDue,
+  latestCheckin,
   parseProfileSignals,
+  weeklyEasing,
   type FeedbackSignal,
   type ProfileSignals,
 } from '../src/livingProfile.ts';
@@ -100,17 +105,17 @@ describe('computeDifficultyBias', () => {
   });
 
   it('в основном «тяжело» → −1 (легче)', () => {
-    const s: ProfileSignals = { feedback: [sig('hard'), sig('hard'), sig('right')] };
+    const s: ProfileSignals = { feedback: [sig('hard'), sig('hard'), sig('right')], checkins: [] };
     expect(computeDifficultyBias(s)).toBe(-1);
   });
 
   it('в основном «мягко» → +1 (сложнее)', () => {
-    const s: ProfileSignals = { feedback: [sig('soft'), sig('soft')] };
+    const s: ProfileSignals = { feedback: [sig('soft'), sig('soft')], checkins: [] };
     expect(computeDifficultyBias(s)).toBe(1);
   });
 
   it('баланс → 0', () => {
-    const s: ProfileSignals = { feedback: [sig('soft'), sig('hard'), sig('right')] };
+    const s: ProfileSignals = { feedback: [sig('soft'), sig('hard'), sig('right')], checkins: [] };
     expect(computeDifficultyBias(s)).toBe(0);
   });
 
@@ -118,8 +123,66 @@ describe('computeDifficultyBias', () => {
     const s: ProfileSignals = {
       // 5 свежих «мягко» после старых «тяжело» → +1
       feedback: [sig('hard'), sig('hard'), sig('hard'), sig('soft'), sig('soft'), sig('soft'), sig('soft'), sig('soft')],
+      checkins: [],
     };
     expect(computeDifficultyBias(s)).toBe(1);
+  });
+});
+
+describe('недельный чек-ин (WEEK-1)', () => {
+  const DAY = 86_400_000;
+  const now = new Date('2026-07-19T12:00:00.000Z');
+
+  it('appendCheckin добавляет и обрезает до CHECKIN_CAP', () => {
+    let s = emptyProfileSignals();
+    for (let i = 0; i < CHECKIN_CAP + 5; i += 1) {
+      s = appendCheckin(s, { answer: 'same', at: `2026-07-${String((i % 27) + 1).padStart(2, '0')}T00:00:00.000Z` });
+    }
+    expect(s.checkins).toHaveLength(CHECKIN_CAP);
+  });
+
+  it('latestCheckin возвращает последний / null', () => {
+    expect(latestCheckin(emptyProfileSignals())).toBeNull();
+    const s = appendCheckin(emptyProfileSignals(), { answer: 'harder', at: now.toISOString() });
+    expect(latestCheckin(s)?.answer).toBe('harder');
+  });
+
+  it('appendFeedback НЕ теряет checkins (и наоборот)', () => {
+    let s = appendCheckin(emptyProfileSignals(), { answer: 'same', at: now.toISOString() });
+    s = appendFeedback(s, { workoutSlug: 'w', rating: 'hard', at: now.toISOString() });
+    expect(s.checkins).toHaveLength(1);
+    expect(s.feedback).toHaveLength(1);
+  });
+
+  it('isCheckinDue: новый аккаунт (<7 дней) → false', () => {
+    const created = new Date(now.getTime() - 2 * DAY);
+    expect(isCheckinDue(emptyProfileSignals(), created, now)).toBe(false);
+  });
+
+  it('isCheckinDue: старый аккаунт без чек-инов → true', () => {
+    const created = new Date(now.getTime() - 30 * DAY);
+    expect(isCheckinDue(emptyProfileSignals(), created, now)).toBe(true);
+  });
+
+  it('isCheckinDue: чек-ин 3 дня назад → false; 8 дней назад → true', () => {
+    const created = new Date(now.getTime() - 30 * DAY);
+    const recent = appendCheckin(emptyProfileSignals(), {
+      answer: 'same',
+      at: new Date(now.getTime() - 3 * DAY).toISOString(),
+    });
+    expect(isCheckinDue(recent, created, now)).toBe(false);
+    const old = appendCheckin(emptyProfileSignals(), {
+      answer: 'same',
+      at: new Date(now.getTime() - 8 * DAY).toISOString(),
+    });
+    expect(isCheckinDue(old, created, now)).toBe(true);
+  });
+
+  it('weeklyEasing: harder → −1, better → +1, same/нет → 0', () => {
+    expect(weeklyEasing(emptyProfileSignals())).toBe(0);
+    expect(weeklyEasing(appendCheckin(emptyProfileSignals(), { answer: 'harder', at: now.toISOString() }))).toBe(-1);
+    expect(weeklyEasing(appendCheckin(emptyProfileSignals(), { answer: 'better', at: now.toISOString() }))).toBe(1);
+    expect(weeklyEasing(appendCheckin(emptyProfileSignals(), { answer: 'same', at: now.toISOString() }))).toBe(0);
   });
 });
 
@@ -258,5 +321,43 @@ describe('POST /feedback', () => {
     const recs = await app.inject({ method: 'GET', url: '/recommendations', headers: bearer(token) });
     expect(recs.statusCode).toBe(200);
     expect(recs.json().workouts.length).toBeGreaterThan(0);
+  });
+});
+
+describe('POST /checkin (WEEK-1)', () => {
+  it('без auth → 401', async () => {
+    const res = await app.inject({ method: 'POST', url: '/checkin', payload: { answer: 'same' } });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('невалидный ответ → 400', async () => {
+    const token = await authAs(981001);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/checkin',
+      headers: bearer(token),
+      payload: { answer: 'meh' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('валидный ответ → 200 { ok, weeklyCheckin.due=false }; /me отражает', async () => {
+    const token = await authAs(981002);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/checkin',
+      headers: bearer(token),
+      payload: { answer: 'harder' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ ok: true, weeklyCheckin: { due: false } });
+
+    const me = await app.inject({ method: 'GET', url: '/me', headers: bearer(token) });
+    // Свежий аккаунт (<7 дней) → чек-ин не показываем.
+    expect(me.json().weeklyCheckin).toEqual({ due: false });
+
+    // Подборка продолжает работать (harder → мягкий сдвиг к щадящему).
+    const recs = await app.inject({ method: 'GET', url: '/recommendations', headers: bearer(token) });
+    expect(recs.statusCode).toBe(200);
   });
 });
