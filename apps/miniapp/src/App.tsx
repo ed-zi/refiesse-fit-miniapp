@@ -30,20 +30,14 @@ import {
   paywallFeatures,
 } from './data/mock'
 import { onboardingToCatalogQuery } from './data/recommendations'
+import {
+  isTab,
+  navigationStore,
+  useNavigation,
+  useSystemBackButton,
+  type Screen,
+} from './navigation'
 import './App.css'
-
-type Screen =
-  | 'home'
-  | 'onboarding'
-  | 'recommendations'
-  | 'catalog'
-  | 'workout'
-  | 'plans'
-  | 'locked'
-  | 'paywall'
-  | 'success'
-  | 'progress'
-  | 'profile'
 
 const steps: Array<{ id: Screen; label: string }> = [
   { id: 'home', label: 'Home: быстрое действие на сегодня' },
@@ -147,7 +141,13 @@ function formatDayMonth(iso: string | null): string | null {
 }
 
 function App() {
-  const [screen, setScreen] = useState<Screen>('home')
+  // Навигация — отдельный сервис (стек + вкладки), поверх системной кнопки
+  // «назад» Telegram. screen — текущий экран (верх стека).
+  const nav = useNavigation()
+  const screen = nav.screen
+  // Системная кнопка «назад» показывается, когда есть куда вернуться по стеку,
+  // и снимает верхний экран (то же, что свайп-назад в Telegram).
+  useSystemBackButton(nav.canGoBack, nav.back)
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers>(
     defaultOnboardingAnswers,
@@ -197,9 +197,12 @@ function App() {
         } else {
           // Новый пользователь ещё не проходил подбор → квиз как онбординг,
           // сразу при первом открытии (а не спрятанной кнопкой на Home).
+          // reset: онбординг становится корнем стека — системная кнопка «назад»
+          // на первом экране скрыта (возвращаться некуда).
           setOnboardingStep(0)
-          setScreen('onboarding')
-          window.scrollTo({ top: 0 })
+          // Стабильная ссылка на стор (не hook-объект nav) — эффект грузит данные
+          // и не должен зависеть от навигации.
+          navigationStore.reset('onboarding')
         }
       })
       .catch((error: unknown) => {
@@ -223,13 +226,26 @@ function App() {
     [screen],
   )
 
-  /** Прямая навигация без проверок (для внутренних переходов). */
+  // Любой переход по стеку (вглубь/назад/переключение вкладки) прокручивает
+  // экран наверх. nav.current — новый объект на каждую смену маршрута.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [nav.current])
+
+  /**
+   * Прямая навигация без проверок. Экран-вкладка идёт «вширь» (selectTab —
+   * сброс к её корню), остальные — «вглубь» (push поверх текущего). Скролл
+   * наверх делает общий эффект на смену маршрута (ниже).
+   */
   function goUnchecked(next: Screen) {
     if (next === 'onboarding') {
       setOnboardingStep(0)
     }
-    setScreen(next)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (isTab(next)) {
+      nav.selectTab(next)
+    } else {
+      nav.navigate(next)
+    }
   }
 
   function go(next: Screen) {
@@ -417,7 +433,9 @@ function App() {
       current ? { ...current, me: { ...current.me, onboarding: answers } } : current,
     )
     setRecommendations(null)
-    goUnchecked('recommendations')
+    // replace: онбординг снимается со стека — «назад» с подборки ведёт туда,
+    // откуда квиз открыли (Home / профиль), а не обратно в квиз.
+    nav.replace('recommendations')
     void (async () => {
       try {
         await apiClient.saveOnboarding(answers)
@@ -613,7 +631,7 @@ function App() {
               {screen === 'onboarding' && (
                 <OnboardingScreen
                   answers={onboardingAnswers}
-                  go={go}
+                  onExit={nav.back}
                   onComplete={completeOnboarding}
                   stepIndex={onboardingStep}
                   setAnswers={setOnboardingAnswers}
@@ -639,6 +657,7 @@ function App() {
               )}
               {screen === 'workout' && workoutForDetail && (
                 <WorkoutScreen
+                  back={nav.back}
                   careAreas={careAreas}
                   doneLabel={doneLabel}
                   go={go}
@@ -653,10 +672,11 @@ function App() {
                 <PlansScreen data={data} go={go} openWorkout={openWorkout} />
               )}
               {screen === 'locked' && workoutForLocked && (
-                <LockedScreen go={go} workout={workoutForLocked} />
+                <LockedScreen back={nav.back} go={go} workout={workoutForLocked} />
               )}
               {screen === 'paywall' && (
                 <PaywallScreen
+                  back={nav.back}
                   go={go}
                   onAlreadyPaid={() => refreshAccess({ manual: true })}
                   onPay={startPayment}
@@ -682,6 +702,7 @@ function App() {
               )}
               {screen === 'profile' && (
                 <ProfileScreen
+                  back={nav.back}
                   go={go}
                   me={data.me}
                   onEditOnboarding={editOnboarding}
@@ -997,14 +1018,15 @@ function answerLabel(step: OnboardingStepDef, answers: OnboardingAnswers): strin
 
 function OnboardingScreen({
   answers,
-  go,
+  onExit,
   onComplete,
   stepIndex,
   setAnswers,
   setStepIndex,
 }: {
   answers: OnboardingAnswers
-  go: (screen: Screen) => void
+  /** Выход из онбординга на первом шаге — «назад» по стеку навигации. */
+  onExit: () => void
   onComplete: (answers: OnboardingAnswers) => void
   stepIndex: number
   setAnswers: Dispatch<SetStateAction<OnboardingAnswers>>
@@ -1044,7 +1066,8 @@ function OnboardingScreen({
 
   function back() {
     if (stepIndex === 0) {
-      go('home')
+      // Первый шаг: выходим из онбординга — «назад» по системному стеку.
+      onExit()
       return
     }
     setStepIndex((current) => Math.max(current - 1, 0))
@@ -1381,6 +1404,7 @@ function formatClock(totalSec: number): string {
 }
 
 function WorkoutScreen({
+  back,
   careAreas,
   doneLabel,
   go,
@@ -1390,6 +1414,7 @@ function WorkoutScreen({
   showToast,
   workout,
 }: {
+  back: () => void
   careAreas: string[]
   doneLabel: string
   go: (screen: Screen) => void
@@ -1428,7 +1453,7 @@ function WorkoutScreen({
   return (
     <section className="screen">
       <TopBar
-        onBack={() => go('catalog')}
+        onBack={back}
         favorite={{ active: isFavorite, onToggle: () => onToggleFavorite(workout.slug) }}
       />
       {videoId ? (
@@ -1618,10 +1643,18 @@ function PlansScreen({
   )
 }
 
-function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: Workout }) {
+function LockedScreen({
+  back,
+  go,
+  workout,
+}: {
+  back: () => void
+  go: (screen: Screen) => void
+  workout: Workout
+}) {
   return (
     <section className="screen">
-      <TopBar onBack={() => go('catalog')} />
+      <TopBar onBack={back} />
       <div className="video muted-video" />
       <h2 className="compact-title">{workout.title}</h2>
       <p className="lead">{workout.description}</p>
@@ -1645,11 +1678,13 @@ function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: 
 }
 
 function PaywallScreen({
+  back,
   go,
   onAlreadyPaid,
   onPay,
   payPending,
 }: {
+  back: () => void
   go: (screen: Screen) => void
   onAlreadyPaid: () => void
   onPay: () => void
@@ -1657,7 +1692,7 @@ function PaywallScreen({
 }) {
   return (
     <section className="screen">
-      <TopBar onBack={() => go('catalog')} />
+      <TopBar onBack={back} />
       <div className="paywall">
         <div>
           <div className="badge">Refiesse Fit Premium</div>
@@ -1797,11 +1832,13 @@ const reminderHourOptions: Array<{ hour: number; label: string }> = [
 ]
 
 function ProfileScreen({
+  back,
   go,
   me,
   onEditOnboarding,
   onUpdateReminders,
 }: {
+  back: () => void
   go: (screen: Screen) => void
   me: UserProfile
   onEditOnboarding: () => void
@@ -1828,7 +1865,7 @@ function ProfileScreen({
 
   return (
     <section className="screen">
-      <TopBar title="Профиль" onBack={() => go('home')} />
+      <TopBar title="Профиль" onBack={back} />
       <div className="profile-card">
         <h3>{me.firstName}</h3>
         <p className="lead">

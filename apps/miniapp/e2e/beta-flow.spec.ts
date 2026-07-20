@@ -65,6 +65,27 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(page.locator('.workout-card .pill.premium').first()).toBeVisible()
   })
 
+  test('Навигация вглубь/назад: каталог → тренировка → «Назад» возвращает в каталог', async ({
+    page,
+  }) => {
+    await openApp(page)
+    await navTo(page, NAV.catalog)
+
+    // Каталог: >3 карточек. Уходим «вглубь» — открываем тренировку.
+    await expect(page.locator('.workout-card').first()).toBeVisible()
+    const freeCard = page.locator('.workout-card', { has: page.locator('.pill.free') }).first()
+    await freeCard.click()
+    // На экране тренировки: есть факты и кнопка «Я сделал(а)».
+    await expect(page.locator('.facts')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Я сделал/ })).toBeVisible()
+
+    // «Назад» по стеку навигации возвращает туда, откуда пришли — в каталог
+    // (а не на жёстко зашитый экран). Каталог узнаём по числу карточек.
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page.locator('.facts')).toHaveCount(0)
+    expect(await page.locator('.workout-card').count()).toBeGreaterThan(3)
+  })
+
   test('Free-тренировка → «Я сделала» → toast и прогресс ≥1 тренировка и минуты', async ({
     page,
   }) => {
