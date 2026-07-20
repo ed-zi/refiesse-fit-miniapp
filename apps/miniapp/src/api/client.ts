@@ -60,7 +60,8 @@ export interface ApiClient {
   /** Недельный лёгкий чек-ин (WEEK-1): «как прошла неделя». */
   submitCheckin(answer: WeeklyCheckinAnswer): Promise<WeeklyCheckinStatus>
   /** Отметка «Я сделала» — идемпотентна по дню, возвращает обновлённые метрики. */
-  markDone(workoutSlug: string): Promise<ProgressSummary>
+  /** durationMin — реально проведённые минуты (честный таймер); иначе номинал. */
+  markDone(workoutSlug: string, durationMin?: number): Promise<ProgressSummary>
   /** Пост-тренировочный микро-вопрос «Как ощущалось?» → живой профиль (LP-1). */
   sendFeedback(workoutSlug: string, rating: WorkoutFeedbackRating): Promise<WorkoutFeedbackResult>
   toggleFavorite(workoutSlug: string): Promise<FavoriteToggleResult>
@@ -162,11 +163,13 @@ function createMockApiClient(): ApiClient {
       weeklyCheckin = { due: false }
       return Promise.resolve({ ...weeklyCheckin })
     },
-    markDone: (workoutSlug) => {
+    markDone: (workoutSlug, durationMin) => {
       const workout = mockWorkouts.find((item) => item.slug === workoutSlug)
       if (!workout) {
         return Promise.reject(new ApiError('NOT_FOUND', 'Тренировка не найдена', 404))
       }
+      // Честный таймер: реальное время, если передано, иначе номинал.
+      const recorded = durationMin ?? workout.durationMin
       const today = new Date().toISOString().slice(0, 10)
       const duplicate = entries.some(
         (entry) => entry.workoutSlug === workoutSlug && entry.completedAt.slice(0, 10) === today,
@@ -178,14 +181,14 @@ function createMockApiClient(): ApiClient {
             workoutSlug: workout.slug,
             workoutTitle: workout.title,
             completedAt: new Date().toISOString(),
-            durationMin: workout.durationMin,
+            durationMin: recorded,
           },
           ...entries,
         ]
         summary = {
           ...summary,
           workouts: summary.workouts + 1,
-          minutes: summary.minutes + workout.durationMin,
+          minutes: summary.minutes + recorded,
           planProgress: { ...summary.planProgress },
         }
       }
@@ -403,10 +406,10 @@ function createHttpApiClient(baseUrl: string): ApiClient {
       })
       return weeklyCheckin
     },
-    markDone: async (workoutSlug) => {
+    markDone: async (workoutSlug, durationMin) => {
       const { summary } = await request<{ summary: ProgressSummary }>('/progress', {
         method: 'POST',
-        body: { workoutSlug },
+        body: { workoutSlug, ...(durationMin !== undefined ? { durationMin } : {}) },
       })
       return summary
     },

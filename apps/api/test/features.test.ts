@@ -185,6 +185,37 @@ describe('POST /progress', () => {
     expect(res.statusCode).toBe(404);
     expect(res.json().error.code).toBe('NOT_FOUND');
   });
+
+  it('честный таймер: durationMin пишет реальное время вместо номинала', async () => {
+    const token = await authAs(700310);
+    // desk-reset-5 номинально 5 минут — отмечаем как реально 14.
+    const res = await app.inject({
+      method: 'POST',
+      url: '/progress',
+      headers: bearer(token),
+      payload: { workoutSlug: 'desk-reset-5', durationMin: 14 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().summary.minutes).toBe(14);
+  });
+
+  it('durationMin вне диапазона (0 / >180) → 400', async () => {
+    const token = await authAs(700311);
+    const zero = await app.inject({
+      method: 'POST',
+      url: '/progress',
+      headers: bearer(token),
+      payload: { workoutSlug: 'desk-reset-5', durationMin: 0 },
+    });
+    expect(zero.statusCode).toBe(400);
+    const huge = await app.inject({
+      method: 'POST',
+      url: '/progress',
+      headers: bearer(token),
+      payload: { workoutSlug: 'desk-reset-5', durationMin: 500 },
+    });
+    expect(huge.statusCode).toBe(400);
+  });
 });
 
 describe('GET /progress — summary и история', () => {

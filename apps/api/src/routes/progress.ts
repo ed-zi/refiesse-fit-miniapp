@@ -6,6 +6,12 @@ import type { PrismaClient } from '../generated/prisma/client.ts';
 
 const progressBodySchema = z.object({
   workoutSlug: z.string().min(1),
+  /**
+   * Реально проведённые минуты (честный таймер, VID-1). Опционально — если не
+   * задано, берём номинальную длительность тренировки. Клэмп 1..180, чтобы
+   * забытая открытой сессия не писала часы.
+   */
+  durationMin: z.number().int().min(1).max(180).optional(),
 });
 
 /** = shared ProgressSummary. */
@@ -106,7 +112,7 @@ export function registerProgressRoutes(app: FastifyInstance): void {
     '/progress',
     { preHandler: authenticate },
     async (request): Promise<{ summary: ProgressSummary }> => {
-      const { workoutSlug } = progressBodySchema.parse(request.body ?? {});
+      const { workoutSlug, durationMin } = progressBodySchema.parse(request.body ?? {});
       const userId = request.user.userId;
 
       const workout = await app.prisma.workout.findFirst({
@@ -116,6 +122,10 @@ export function registerProgressRoutes(app: FastifyInstance): void {
         throw new AppError(404, 'NOT_FOUND', `Workout "${workoutSlug}" not found`);
       }
 
+      // Честный таймер (VID-1): пишем реально проведённое время, если пришло;
+      // иначе — номинальную длительность тренировки (снимок на момент выполнения).
+      const recordedDuration = durationMin ?? workout.durationMin;
+
       const entryDate = utcDate(new Date());
       await app.prisma.progressEntry.upsert({
         where: {
@@ -124,7 +134,7 @@ export function registerProgressRoutes(app: FastifyInstance): void {
         create: {
           userId,
           workoutId: workout.id,
-          durationMin: workout.durationMin, // снимок длительности на момент выполнения
+          durationMin: recordedDuration,
           entryDate,
         },
         update: {}, // дубль в тот же день — ничего не меняем

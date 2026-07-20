@@ -21,6 +21,7 @@ import type {
 import { doneVerbLabel, effectiveCareAreas } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
+import { loadYouTubeIframeApi, parseYouTubeId, YT_PLAYING, type YouTubePlayer } from './youtube'
 import {
   NO_EQUIPMENT,
   type OnboardingStepDef,
@@ -446,11 +447,12 @@ function App() {
       })
   }
 
-  /** «Я сделала»: markDone → свежие метрики (+ история) → мягкий toast. */
-  function markWorkoutDone(workoutSlug: string) {
+  /** «Я сделала»: markDone → свежие метрики (+ история) → мягкий toast.
+   *  durationMin — реально проведённые минуты (честный таймер), иначе номинал. */
+  function markWorkoutDone(workoutSlug: string, durationMin?: number) {
     void (async () => {
       try {
-        const summary = await apiClient.markDone(workoutSlug)
+        const summary = await apiClient.markDone(workoutSlug, durationMin)
         let progress: ProgressOverview = {
           summary,
           entries: data?.progress.entries ?? [],
@@ -1147,6 +1149,88 @@ function CatalogScreen({
   )
 }
 
+/**
+ * Встроенный YouTube-плеер + честный таймер (VID). Считает реально просмотренные
+ * секунды через IFrame API. Устойчив к отказу: если API не загрузился (нет сети
+ * до youtube.com) — status='failed', показываем плоский iframe, минуты по номиналу.
+ * YT заменяет управляемый им узел на iframe, поэтому держим его ВНЕ дерева React
+ * (ручной host-div внутри ref-обёртки), чтобы не конфликтовать при размонтировании.
+ */
+function useYouTubePlayer(videoId: string | null) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<YouTubePlayer | null>(null)
+  const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle')
+  const [watchedSec, setWatchedSec] = useState(0)
+
+  useEffect(() => {
+    const wrapper = containerRef.current
+    if (!videoId || !wrapper) {
+      return
+    }
+    let cancelled = false
+    let tick: ReturnType<typeof setInterval> | undefined
+    const host = document.createElement('div')
+    wrapper.appendChild(host)
+
+    loadYouTubeIframeApi()
+      .then((YT) => {
+        if (cancelled) {
+          return
+        }
+        playerRef.current = new YT.Player(host, {
+          videoId,
+          playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+          events: {
+            onReady: () => {
+              if (!cancelled) setStatus('ready')
+            },
+          },
+        })
+        tick = setInterval(() => {
+          const player = playerRef.current
+          try {
+            if (player && player.getPlayerState() === YT_PLAYING) {
+              setWatchedSec((seconds) => seconds + 1)
+            }
+          } catch {
+            /* плеер ещё не готов — игнорируем */
+          }
+        }, 1000)
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('failed')
+      })
+
+    return () => {
+      cancelled = true
+      if (tick) clearInterval(tick)
+      try {
+        playerRef.current?.destroy()
+      } catch {
+        /* noop */
+      }
+      playerRef.current = null
+      wrapper.replaceChildren()
+    }
+  }, [videoId])
+
+  const play = (): void => {
+    try {
+      playerRef.current?.playVideo()
+    } catch {
+      /* noop */
+    }
+  }
+  return { containerRef, status, watchedSec, play }
+}
+
+/** Секунды → «M:SS». */
+function formatClock(totalSec: number): string {
+  const min = Math.floor(totalSec / 60)
+  const sec = totalSec % 60
+  return `${min}:${String(sec).padStart(2, '0')}`
+}
+
 function WorkoutScreen({
   careAreas,
   doneLabel,
@@ -1161,11 +1245,22 @@ function WorkoutScreen({
   doneLabel: string
   go: (screen: Screen) => void
   isFavorite: boolean
-  onDone: (workoutSlug: string) => void
+  onDone: (workoutSlug: string, durationMin?: number) => void
   onToggleFavorite: (workoutSlug: string) => void
   showToast: (message: string) => void
   workout: Workout
 }) {
+  const videoId = parseYouTubeId(workout.videoUrl)
+  const { containerRef, status, watchedSec, play } = useYouTubePlayer(videoId)
+
+  function finish(): void {
+    // Честный таймер: пишем реально просмотренное время; короткая сессия (<30с —
+    // «уже делал(а)») пишется по номиналу (durationMin не передаём).
+    const measured = watchedSec >= 30 ? Math.max(1, Math.round(watchedSec / 60)) : undefined
+    onDone(workout.slug, measured)
+    go('progress')
+  }
+
   return (
     <section className="screen">
       <TopBar
@@ -1173,17 +1268,32 @@ function WorkoutScreen({
         right={isFavorite ? '♥' : '♡'}
         onProfile={() => onToggleFavorite(workout.slug)}
       />
-      {workout.videoUrl ? (
-        <a
+      {videoId ? (
+        status === 'failed' ? (
+          <div className="video-embed">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1`}
+              title={workout.title}
+              allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <div className="video-embed" ref={containerRef} />
+        )
+      ) : workout.videoUrl ? (
+        <button
           className="video video-playable"
-          href={workout.videoUrl}
-          rel="noreferrer"
-          target="_blank"
+          onClick={() => openExternalLink(workout.videoUrl as string)}
+          type="button"
         >
           <span className="video-cta">Смотреть видео</span>
-        </a>
+        </button>
       ) : (
         <div className="video" />
+      )}
+      {watchedSec > 0 && (
+        <p className="timer-note">В практике: {formatClock(watchedSec)}</p>
       )}
       <h2 className="compact-title">{workout.title}</h2>
       <p className="lead">{workout.description}</p>
@@ -1204,8 +1314,10 @@ function WorkoutScreen({
       <button
         className="cta full"
         onClick={() => {
-          if (workout.videoUrl) {
-            window.open(workout.videoUrl, '_blank', 'noopener')
+          if (videoId) {
+            play()
+          } else if (workout.videoUrl) {
+            openExternalLink(workout.videoUrl)
           } else {
             showToast('Тренировка началась')
           }
@@ -1214,14 +1326,7 @@ function WorkoutScreen({
       >
         Начать тренировку
       </button>
-      <button
-        className="cta ghost full stacked"
-        onClick={() => {
-          onDone(workout.slug)
-          go('progress')
-        }}
-        type="button"
-      >
+      <button className="cta ghost full stacked" onClick={finish} type="button">
         {doneLabel}
       </button>
     </section>

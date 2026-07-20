@@ -51,7 +51,10 @@ export function usersDueForReminder(
   now: Date,
 ): RemindableUser[] {
   const hour = mskHour(now);
-  const todayKey = mskDateKey(now);
+  // День считаем по UTC — согласованно с progress.entryDate (utcDate). Час
+  // напоминания при этом остаётся по МСК. Для реальных часов (утро–вечер МСК)
+  // UTC-день и МСК-день совпадают, так что расхождения на практике нет.
+  const todayKey = utcDateKey(now);
   return users.filter((user) => {
     if (!user.reminderOptIn) {
       return false;
@@ -133,7 +136,8 @@ export async function runReminderTick(
     return { sent: 0 };
   }
 
-  const todayKey = mskDateKey(now);
+  // UTC-день — тот же базис, что у progress.entryDate.
+  const todayKey = utcDateKey(now);
   const todayDate = new Date(`${todayKey}T00:00:00.000Z`);
   const practiced = await prisma.progressEntry.findMany({
     where: { userId: { in: optInUsers.map((u) => u.id) }, entryDate: todayDate },

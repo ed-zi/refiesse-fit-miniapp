@@ -150,7 +150,9 @@ describe('runReminderTick', () => {
   });
 
   it('кто занимался сегодня — пинг не получает', async () => {
-    const now = new Date('2026-07-19T16:00:00.000Z');
+    // Реальное «сейчас»: POST /progress ставит entryDate = сегодня (UTC),
+    // и тик должен смотреть тот же день — иначе тест зависит от даты прогона.
+    const now = new Date();
     const hour = mskHour(now);
     const token = await authAs(990200);
     await app.inject({

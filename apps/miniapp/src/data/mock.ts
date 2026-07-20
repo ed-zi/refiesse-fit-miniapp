@@ -34,7 +34,9 @@ export const mockWorkouts: Workout[] = [
     level: 'beginner',
     equipment: [],
     isPremium: false,
-    videoUrl: null,
+    // Демонстрационная YouTube-ссылка — показать встроенный плеер в прототипе.
+    // В проде videoUrl приходят из контента Кати (тоже YouTube).
+    videoUrl: 'https://www.youtube.com/watch?v=inpok4MKVLM',
     description:
       'Короткая практика для тех, кто провёл день за компьютером и чувствует напряжение в шее и плечах.',
     cautions:
