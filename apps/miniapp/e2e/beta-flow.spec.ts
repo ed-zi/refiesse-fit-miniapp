@@ -76,11 +76,13 @@ test.describe('Refiesse Fit — бета-флоу', () => {
     await expect(freeCard).toBeVisible()
     await freeCard.click()
 
-    // Экран тренировки: есть кнопки «Начать тренировку» и «Я сделал(а)».
-    // Форма глагола зависит от рода в сохранённом подборе (общий тестовый
-    // пользователь), поэтому матчим обе формы префиксом.
-    await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
-    await page.getByRole('button', { name: /^Я сделал/ }).click()
+    // Экран тренировки: кнопка «Я сделал(а)» есть всегда (форма глагола зависит
+    // от рода в подборе — матчим обе префиксом). Первичная CTA лейблом отличается
+    // по типу видео (YouTube → «Начать тренировку», внешнее → «Смотреть видео»),
+    // поэтому её не проверяем — важно, что экран тренировки открылся.
+    const doneButton = page.getByRole('button', { name: /^Я сделал/ })
+    await expect(doneButton).toBeVisible()
+    await doneButton.click()
 
     // Мягкий toast-подтверждение.
     await expect(page.locator('.toast.show')).toContainText('Записано')

@@ -21,7 +21,7 @@ import type {
 import { doneVerbLabel, effectiveCareAreas } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
-import { loadYouTubeIframeApi, parseYouTubeId, YT_PLAYING, type YouTubePlayer } from './youtube'
+import { loadYouTubeIframeApi, parseYouTubeId, type YouTubePlayer } from './youtube'
 import {
   NO_EQUIPMENT,
   type OnboardingStepDef,
@@ -1150,9 +1150,8 @@ function CatalogScreen({
 }
 
 /**
- * Встроенный YouTube-плеер + честный таймер (VID). Считает реально просмотренные
- * секунды через IFrame API. Устойчив к отказу: если API не загрузился (нет сети
- * до youtube.com) — status='failed', показываем плоский iframe, минуты по номиналу.
+ * Встроенный YouTube-плеер (VID). Видео играет ВНУТРИ мини-аппа. Устойчив к
+ * отказу: нет сети до youtube.com → status='failed', показываем плоский iframe.
  * YT заменяет управляемый им узел на iframe, поэтому держим его ВНЕ дерева React
  * (ручной host-div внутри ref-обёртки), чтобы не конфликтовать при размонтировании.
  */
@@ -1160,7 +1159,6 @@ function useYouTubePlayer(videoId: string | null) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const playerRef = useRef<YouTubePlayer | null>(null)
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle')
-  const [watchedSec, setWatchedSec] = useState(0)
 
   useEffect(() => {
     const wrapper = containerRef.current
@@ -1168,7 +1166,6 @@ function useYouTubePlayer(videoId: string | null) {
       return
     }
     let cancelled = false
-    let tick: ReturnType<typeof setInterval> | undefined
     const host = document.createElement('div')
     wrapper.appendChild(host)
 
@@ -1186,16 +1183,6 @@ function useYouTubePlayer(videoId: string | null) {
             },
           },
         })
-        tick = setInterval(() => {
-          const player = playerRef.current
-          try {
-            if (player && player.getPlayerState() === YT_PLAYING) {
-              setWatchedSec((seconds) => seconds + 1)
-            }
-          } catch {
-            /* плеер ещё не готов — игнорируем */
-          }
-        }, 1000)
       })
       .catch(() => {
         if (!cancelled) setStatus('failed')
@@ -1203,7 +1190,6 @@ function useYouTubePlayer(videoId: string | null) {
 
     return () => {
       cancelled = true
-      if (tick) clearInterval(tick)
       try {
         playerRef.current?.destroy()
       } catch {
@@ -1221,7 +1207,43 @@ function useYouTubePlayer(videoId: string | null) {
       /* noop */
     }
   }
-  return { containerRef, status, watchedSec, play }
+  const pause = (): void => {
+    try {
+      playerRef.current?.pauseVideo()
+    } catch {
+      /* noop */
+    }
+  }
+  return { containerRef, status, play, pause }
+}
+
+/**
+ * Честный видимый секундомер практики (VID). Считает реальные секунды, пока
+ * практика идёт И приложение на экране (visibilitychange ставит на паузу, чтобы
+ * не считать время, когда пользователь свернул апп). Не зависит от YouTube-API.
+ */
+function useSessionTimer() {
+  const [running, setRunning] = useState(false)
+  const [elapsedSec, setElapsedSec] = useState(0)
+
+  useEffect(() => {
+    if (!running) {
+      return
+    }
+    const id = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        setElapsedSec((seconds) => seconds + 1)
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [running])
+
+  return {
+    running,
+    elapsedSec,
+    start: () => setRunning(true),
+    stop: () => setRunning(false),
+  }
 }
 
 /** Секунды → «M:SS». */
@@ -1251,12 +1273,27 @@ function WorkoutScreen({
   workout: Workout
 }) {
   const videoId = parseYouTubeId(workout.videoUrl)
-  const { containerRef, status, watchedSec, play } = useYouTubePlayer(videoId)
+  const { containerRef, status, play, pause } = useYouTubePlayer(videoId)
+  const timer = useSessionTimer()
 
+  function startPractice(): void {
+    timer.start()
+    if (videoId) {
+      play()
+    }
+  }
+  function pausePractice(): void {
+    timer.stop()
+    if (videoId) {
+      pause()
+    }
+  }
   function finish(): void {
-    // Честный таймер: пишем реально просмотренное время; короткая сессия (<30с —
+    // Честный таймер: пишем реально проведённое время; короткая сессия (<30с —
     // «уже делал(а)») пишется по номиналу (durationMin не передаём).
-    const measured = watchedSec >= 30 ? Math.max(1, Math.round(watchedSec / 60)) : undefined
+    timer.stop()
+    const measured =
+      timer.elapsedSec >= 30 ? Math.max(1, Math.round(timer.elapsedSec / 60)) : undefined
     onDone(workout.slug, measured)
     go('progress')
   }
@@ -1292,8 +1329,11 @@ function WorkoutScreen({
       ) : (
         <div className="video" />
       )}
-      {watchedSec > 0 && (
-        <p className="timer-note">В практике: {formatClock(watchedSec)}</p>
+      {(timer.running || timer.elapsedSec > 0) && (
+        <div className={`practice-timer ${timer.running ? 'live' : 'paused'}`} role="status">
+          <span className="practice-timer-dot" />
+          {timer.running ? 'Идёт практика' : 'Пауза'} · {formatClock(timer.elapsedSec)}
+        </div>
       )}
       <h2 className="compact-title">{workout.title}</h2>
       <p className="lead">{workout.description}</p>
@@ -1311,21 +1351,29 @@ function WorkoutScreen({
           боли — при дискомфорте остановись.
         </div>
       )}
-      <button
-        className="cta full"
-        onClick={() => {
-          if (videoId) {
-            play()
-          } else if (workout.videoUrl) {
-            openExternalLink(workout.videoUrl)
-          } else {
-            showToast('Тренировка началась')
-          }
-        }}
-        type="button"
-      >
-        Начать тренировку
-      </button>
+      {videoId ? (
+        <button
+          className="cta full"
+          onClick={timer.running ? pausePractice : startPractice}
+          type="button"
+        >
+          {timer.running ? 'Пауза' : timer.elapsedSec > 0 ? 'Продолжить' : 'Начать тренировку'}
+        </button>
+      ) : (
+        <button
+          className="cta full"
+          onClick={() => {
+            if (workout.videoUrl) {
+              openExternalLink(workout.videoUrl)
+            } else {
+              showToast('Тренировка началась')
+            }
+          }}
+          type="button"
+        >
+          {workout.videoUrl ? 'Смотреть видео' : 'Начать тренировку'}
+        </button>
+      )}
       <button className="cta ghost full stacked" onClick={finish} type="button">
         {doneLabel}
       </button>

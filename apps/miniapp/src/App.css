@@ -684,12 +684,41 @@ button.video {
   border: 0;
 }
 
-/* Живой честный таймер под плеером. */
-.timer-note {
-  margin: 0 0 12px 2px;
-  font-size: 13px;
-  font-weight: 800;
+/* Честный видимый секундомер практики (VID) под плеером. */
+.practice-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--lav);
   color: var(--purple);
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.practice-timer-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--purple);
+}
+
+.practice-timer.live .practice-timer-dot {
+  background: #e5484d;
+  animation: timer-pulse 1s ease-in-out infinite;
+}
+
+@keyframes timer-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .muted-video::after {
