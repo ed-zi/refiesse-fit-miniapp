@@ -142,7 +142,7 @@
 }
 
 .avatar,
-.back {
+.icon-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -163,10 +163,50 @@
   font-size: 12px;
 }
 
-.back {
+/* Круглая кнопка-иконка в шапке (назад / сердце) — SVG внутри, единый стиль. */
+.icon-btn {
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+.icon-btn.heart {
+  color: var(--muted);
+}
+
+/* Активное «в избранном» — тёплый мандариновый акцент (единый акцент действия). */
+.icon-btn.heart.active {
+  color: var(--mandarin);
+  border-color: #f6c9b4;
+  background: #fff5f0;
+}
+
+/* Нейтральный бейдж в шапке (счётчик шага онбординга) — не аватар и не действие. */
+.topbar-badge {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--lav);
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Держит левый блок у края, когда справа нет управляющего элемента. */
+.topbar-spacer {
+  width: 40px;
+  height: 40px;
 }
 
 .hero {

@@ -736,22 +736,66 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
   )
 }
 
+const backIcon = (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M15 5l-7 7 7 7" />
+  </svg>
+)
+
+function heartIcon(filled: boolean) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20.8 7.1a4.4 4.4 0 0 0-7.5-2.4L12 6l-1.3-1.3A4.4 4.4 0 0 0 3.2 7.1c0 3.3 3.7 6.1 8.8 10.6 5.1-4.5 8.8-7.3 8.8-10.6z" />
+    </svg>
+  )
+}
+
+/**
+ * Верхняя панель. Слева — бренд re.fit или кнопка «назад» (SVG-стрелка).
+ * Справа — ровно один из вариантов: аватар (инициал → профиль), сердце
+ * «в избранное», или нейтральный бейдж (счётчик шага онбординга). Если ничего
+ * не задано — распорка, чтобы левый блок остался прижат к краю.
+ */
 function TopBar({
   title = 're.fit',
   onProfile,
   onBack,
-  right = 'К',
+  avatarText,
+  favorite,
+  badge,
 }: {
   title?: string
   onProfile?: () => void
   onBack?: () => void
-  right?: string
+  avatarText?: string
+  favorite?: { active: boolean; onToggle: () => void }
+  badge?: string
 }) {
   return (
     <div className="topbar">
       {onBack ? (
-        <button className="back" onClick={onBack} type="button" aria-label="Назад">
-          ←
+        <button className="icon-btn" onClick={onBack} type="button" aria-label="Назад">
+          {backIcon}
         </button>
       ) : (
         <div className="brand">
@@ -764,14 +808,25 @@ function TopBar({
           )}
         </div>
       )}
-      <button
-        className="avatar"
-        onClick={onProfile}
-        type="button"
-        aria-label="Профиль"
-      >
-        {right}
-      </button>
+      {favorite ? (
+        <button
+          className={`icon-btn heart ${favorite.active ? 'active' : ''}`}
+          onClick={favorite.onToggle}
+          type="button"
+          aria-pressed={favorite.active}
+          aria-label={favorite.active ? 'Убрать из избранного' : 'В избранное'}
+        >
+          {heartIcon(favorite.active)}
+        </button>
+      ) : badge ? (
+        <span className="topbar-badge">{badge}</span>
+      ) : avatarText ? (
+        <button className="avatar" onClick={onProfile} type="button" aria-label="Профиль">
+          {avatarText}
+        </button>
+      ) : (
+        <span className="topbar-spacer" aria-hidden="true" />
+      )}
     </div>
   )
 }
@@ -797,7 +852,7 @@ function HomeScreen({
 
   return (
     <section className="screen">
-      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
+      <TopBar avatarText={profileInitial(data.me)} onProfile={() => go('profile')} />
       <div className="hero">
         <div className="badge">
           {data.me.access.isPremium && accessUntil
@@ -995,7 +1050,7 @@ function OnboardingScreen({
 
   return (
     <section className="screen">
-      <TopBar onBack={back} right={`Шаг ${stepIndex + 1}/${onboardingSteps.length}`} />
+      <TopBar onBack={back} badge={`Шаг ${stepIndex + 1}/${onboardingSteps.length}`} />
       <div
         className="onboarding-progress"
         aria-label={`Шаг ${stepIndex + 1} из ${onboardingSteps.length}`}
@@ -1059,7 +1114,7 @@ function RecommendationsScreen({
 
   return (
     <section className="screen">
-      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
+      <TopBar avatarText={profileInitial(data.me)} onProfile={() => go('profile')} />
       <div className="hero">
         <div className="badge">персонально</div>
         <h2>Подобрано для тебя</h2>
@@ -1141,7 +1196,7 @@ function CatalogScreen({
 }) {
   return (
     <section className="screen">
-      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
+      <TopBar avatarText={profileInitial(data.me)} onProfile={() => go('profile')} />
       <h2>Найти по состоянию</h2>
       <p className="lead">
         Тренировки собраны по целям: шея, поясница, кор, мобильность,
@@ -1334,8 +1389,7 @@ function WorkoutScreen({
     <section className="screen">
       <TopBar
         onBack={() => go('catalog')}
-        right={isFavorite ? '♥' : '♡'}
-        onProfile={() => onToggleFavorite(workout.slug)}
+        favorite={{ active: isFavorite, onToggle: () => onToggleFavorite(workout.slug) }}
       />
       {videoId ? (
         status === 'failed' ? (
@@ -1499,7 +1553,7 @@ function PlansScreen({
 
   return (
     <section className="screen">
-      <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
+      <TopBar avatarText={profileInitial(data.me)} onProfile={() => go('profile')} />
       <h2>Идти по системе</h2>
       <p className="lead">Планы на 5–7 дней помогают не искать случайные упражнения.</p>
       {freePlan && (
@@ -1527,7 +1581,7 @@ function PlansScreen({
 function LockedScreen({ go, workout }: { go: (screen: Screen) => void; workout: Workout }) {
   return (
     <section className="screen">
-      <TopBar onBack={() => go('catalog')} right="🔒" />
+      <TopBar onBack={() => go('catalog')} />
       <div className="video muted-video" />
       <h2 className="compact-title">{workout.title}</h2>
       <p className="lead">{workout.description}</p>
@@ -1563,7 +1617,7 @@ function PaywallScreen({
 }) {
   return (
     <section className="screen">
-      <TopBar onBack={() => go('catalog')} right="✧" />
+      <TopBar onBack={() => go('catalog')} />
       <div className="paywall">
         <div>
           <div className="badge">Refiesse Fit Premium</div>
@@ -1604,7 +1658,7 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
 
   return (
     <section className="screen">
-      <TopBar title="Доступ" right="✓" />
+      <TopBar title="Доступ" />
       <div className="success">
         <div className="success-icon">✓</div>
         <h2 className="compact-title">
@@ -1647,7 +1701,7 @@ function ProgressScreen({
 
   return (
     <section className="screen">
-      <TopBar right={initial} onProfile={onProfile} />
+      <TopBar avatarText={initial} onProfile={onProfile} />
       <div className="hero">
         <div className="badge">эта неделя</div>
         <h2>Даже 10 минут считаются</h2>
@@ -1734,7 +1788,7 @@ function ProfileScreen({
 
   return (
     <section className="screen">
-      <TopBar title="Профиль" onBack={() => go('home')} right={me.firstName.charAt(0) || 'К'} />
+      <TopBar title="Профиль" onBack={() => go('home')} />
       <div className="profile-card">
         <h3>{me.firstName}</h3>
         <p className="lead">
