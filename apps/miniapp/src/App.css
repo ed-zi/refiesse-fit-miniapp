@@ -243,9 +243,9 @@ p,
   border: 0;
   border-radius: 999px;
   padding: 0 18px;
-  background: var(--purple);
+  background: var(--mandarin);
   color: #fff;
-  box-shadow: 0 12px 28px rgba(143, 115, 234, 0.28);
+  box-shadow: 0 12px 28px var(--mandarin-shadow);
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
@@ -283,8 +283,8 @@ p,
 
 .cta.ghost {
   background: transparent;
-  color: var(--purple);
-  border: 1px solid #d9d0ff;
+  color: var(--mandarin);
+  border: 1px solid #f6c9b4;
   box-shadow: none;
 }
 
@@ -362,6 +362,40 @@ p,
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+}
+
+/* Компактная полоса прогресса за неделю на Home: регулярность (не вес),
+   выше сгиба, тап ведёт на экран прогресса. */
+.week-strip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--lav);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.week-strip-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.week-strip-vals {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.week-strip-vals b {
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .section-title {

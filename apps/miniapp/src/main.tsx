@@ -1,5 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// Основной шрифт Manrope — самохостится (bundled Vite), без Google Fonts CDN,
+// чтобы шрифт грузился офлайн и надёжно в RU. Variable-файл включает кириллицу.
+import '@fontsource-variable/manrope'
 import './tokens.css'
 import './index.css'
 import App from './App.tsx'

@@ -792,25 +792,71 @@ function HomeScreen({
   const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
   const { done, total } = data.progress.summary.planProgress
   const todayDay = plan?.days[done] ?? null
+  const summary = data.progress.summary
+  const pickLabel = workoutOfDay ? 'Подобрать другую' : 'Подобрать тренировку'
 
   return (
     <section className="screen">
       <TopBar right={profileInitial(data.me)} onProfile={() => go('profile')} />
-      <div className="hero hero-tall">
+      <div className="hero">
         <div className="badge">
           {data.me.access.isPremium && accessUntil
             ? `Доступ открыт до ${accessUntil}`
             : 'Мягкая система движения'}
         </div>
         <h2>Что нужно телу сегодня?</h2>
-        <p>
-          Выберите состояние — я подберу мягкую тренировку на 10–20 минут.
-        </p>
+        <p>Выберите состояние — я подберу мягкую тренировку на 10–20 минут.</p>
       </div>
-      {data.me.weeklyCheckin.due && <WeeklyCheckinCard onAnswer={onCheckin} />}
-      <button className="cta full" onClick={() => go('onboarding')} type="button">
-        Подобрать тренировку
+
+      {/* Прогресс за неделю: регулярность, не вес (above-the-fold, ведёт на экран прогресса). */}
+      <button
+        className="week-strip"
+        onClick={() => go('progress')}
+        type="button"
+        aria-label="Прогресс за эту неделю"
+      >
+        <span className="week-strip-label">За эту неделю</span>
+        <span className="week-strip-vals">
+          <b>{summary.workouts}</b>{' '}
+          {plural(summary.workouts, 'тренировка', 'тренировки', 'тренировок')}
+          {' · '}
+          <b>{summary.minutes}</b> {plural(summary.minutes, 'минута', 'минуты', 'минут')}
+        </span>
       </button>
+
+      {data.me.weeklyCheckin.due && <WeeklyCheckinCard onAnswer={onCheckin} />}
+
+      {workoutOfDay && (
+        <>
+          <div className="section-title">
+            <h3>Тренировка дня</h3>
+            <small>{workoutOfDay.durationMin} мин</small>
+          </div>
+          <WorkoutCard
+            isPremium={workoutOfDay.isPremium}
+            meta={[
+              `${workoutOfDay.durationMin} мин`,
+              levelFactLabels[workoutOfDay.level],
+              equipmentLabel(workoutOfDay),
+            ]}
+            onClick={() => openWorkout(workoutOfDay)}
+            title={workoutOfDay.title}
+            thumb={workoutOfDay.thumbColor}
+          />
+          <button
+            className="cta full stacked"
+            onClick={() => openWorkout(workoutOfDay)}
+            type="button"
+          >
+            Начать
+          </button>
+        </>
+      )}
+
+      <button className="cta ghost full stacked" onClick={() => go('onboarding')} type="button">
+        {pickLabel}
+      </button>
+
       <div className="chips" aria-label="Категории">
         {data.categories.map((category, index) => (
           <button
@@ -823,21 +869,7 @@ function HomeScreen({
           </button>
         ))}
       </div>
-      {workoutOfDay && (
-        <>
-          <div className="section-title">
-            <h3>Тренировка дня</h3>
-            <small>{workoutOfDay.durationMin} мин</small>
-          </div>
-          <WorkoutCard
-            isPremium={workoutOfDay.isPremium}
-            meta={[equipmentLabel(workoutOfDay)]}
-            onClick={() => openWorkout(workoutOfDay)}
-            title={workoutOfDay.title}
-            thumb={workoutOfDay.thumbColor}
-          />
-        </>
-      )}
+
       {plan && (
         <>
           <div className="section-title">

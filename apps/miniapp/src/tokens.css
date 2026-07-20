@@ -24,8 +24,10 @@
   /* ЦВЕТА — бренд / акценты */
   --color-lavender: #f1efff;     /* лавандовый фон секций (=--lav) */
   --color-lavender-ink: #403a4d; /* текст на лаванде (chips, features) */
-  --color-cta: #8f73ea;          /* фиолетовый CTA / active (=--purple) */
-  --color-cta-ink: #ffffff;      /* текст на фиолетовом CTA */
+  --color-cta: #8f73ea;          /* фиолетовый интерактив: active-nav, chips, badge (=--purple) */
+  --color-cta-ink: #ffffff;      /* текст на фиолетовом интерактиве */
+  --color-cta-accent: #f47c48;   /* единый тёплый акцент главного действия (=--mandarin) */
+  --color-cta-accent-ink: #ffffff;/* текст на мандариновом CTA */
   --color-success: #d5ffc7;      /* салатовый success / progress / lime (=--lime) */
   --color-success-ink: #24451f;  /* текст на салатовом (=--lime-ink) */
   --color-success-note: #315d2a; /* вторичный текст на салатовом (program-note) */
@@ -66,8 +68,8 @@
   /* ==========================================================================
      ТИПОГРАФИКА
      ========================================================================== */
-  --font-sans: Inter, TildaSans, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
+  --font-sans: 'Manrope Variable', Inter, TildaSans, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* Размеры (роль → px) */
   --font-size-display: 34px; /* hero H2 (uppercase) */
@@ -140,7 +142,7 @@
   --shadow-soft: 0 18px 42px rgba(44, 38, 70, 0.1);  /* мягкая тень (=--shadow) */
   --shadow-lift: 0 14px 34px rgba(44, 38, 70, 0.12); /* success-icon */
   --shadow-nav: 0 16px 36px rgba(44, 38, 70, 0.13);  /* bottom-nav */
-  --shadow-cta: 0 12px 28px rgba(143, 115, 234, 0.28); /* фиолетовый CTA */
+  --shadow-cta: 0 12px 28px rgba(244, 124, 72, 0.3); /* мандариновый CTA */
   --shadow-phone: 0 24px 70px rgba(30, 25, 48, 0.22);  /* рамка телефона */
 
   /* ==========================================================================

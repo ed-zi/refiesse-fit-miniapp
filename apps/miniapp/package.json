@@ -12,6 +12,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "^5.3.0",
     "@refiesse-fit/shared": "^0.0.0",
     "@sentry/react": "^10.65.0",
     "@telegram-apps/sdk-react": "^3.3.9",
