@@ -1867,12 +1867,12 @@ function Stat({ value, label }: { value: string; label: string }) {
 }
 
 const navIconProps = {
-  width: 16,
-  height: 16,
+  width: 24,
+  height: 24,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 2.2,
+  strokeWidth: 1.9,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
 } as const
@@ -1883,8 +1883,9 @@ function BottomNav({ current, go }: { current: Screen; go: (screen: Screen) => v
       id: 'home',
       icon: (
         <svg {...navIconProps} aria-hidden="true">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          <path d="M3.5 11.2 12 4l8.5 7.2" />
+          <path d="M5.5 10v9.5h13V10" />
+          <path d="M9.7 19.5V14h4.6v5.5" />
         </svg>
       ),
       label: 'Сегодня',

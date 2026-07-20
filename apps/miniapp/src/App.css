@@ -1036,21 +1036,13 @@ button.video {
 }
 
 .bottom-nav i {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
-  background: #faf9ff;
-  color: var(--muted);
+  color: inherit;
   font-style: normal;
-  font-size: 17px;
   line-height: 1;
-}
-
-.bottom-nav button.active i {
-  background: var(--purple);
-  color: #fff;
 }
 
 .bottom-nav span {
