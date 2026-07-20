@@ -288,7 +288,9 @@
         var editor = makeStepsEditor(box, w.steps || []);
         save.addEventListener('click', guard(async function () {
           await api('PUT', '/admin/workouts/' + w.id, { steps: editor.getSteps() });
-          row.remove();
+          // Перезагружаем таблицу, иначе строка держит устаревший w.steps и при
+          // повторном открытии редактора удалённые/добавленные шаги «возвращаются».
+          loadWorkouts();
         }));
       });
       tbody.appendChild(tr);
