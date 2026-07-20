@@ -6,7 +6,8 @@ import { computeDifficultyBias, parseProfileSignals, weeklyEasing } from '../liv
 import {
   buildProfileFromOnboarding,
   pickRecommendedPlan,
-  rankWorkouts,
+  rankWorkoutsScored,
+  recommendedCount,
   withDifficultyBias,
 } from '../recommend.ts';
 
@@ -19,6 +20,11 @@ import {
 
 interface RecommendationsResponse {
   workouts: WorkoutCardDto[];
+  /**
+   * Сколько верхних тренировок из workouts — уверенные совпадения (секция
+   * «Точно вам»). Остальные идут в «Ещё». 0 — нет подбора, единый список.
+   */
+  recommendedCount: number;
   recommendedPlan: ProgramDto | null;
 }
 
@@ -59,7 +65,9 @@ export function registerRecommendationRoutes(app: FastifyInstance): void {
 
       // Скоринг работает по categorySlug — прокидываем его рядом с prisma-строкой.
       const scorable = workouts.map((workout) => ({ ...workout, categorySlug: workout.category.slug }));
-      const ranked = rankWorkouts(scorable, profile);
+      const scored = rankWorkoutsScored(scorable, profile);
+      const ranked = scored.map((entry) => entry.workout);
+      const recCount = recommendedCount(scored, profile);
 
       const rankablePlans = programs.map((program) => ({
         ...program,
@@ -72,6 +80,7 @@ export function registerRecommendationRoutes(app: FastifyInstance): void {
 
       return {
         workouts: ranked.map((workout) => toWorkoutCardDto(workout, { unlocked })),
+        recommendedCount: recCount,
         recommendedPlan: chosenPlan === null ? null : toProgramDto(chosenPlan),
       };
     },

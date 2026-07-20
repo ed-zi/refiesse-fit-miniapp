@@ -6,6 +6,8 @@ import {
   effectiveCareAreas,
   pickRecommendedPlan,
   rankWorkouts,
+  rankWorkoutsScored,
+  recommendedCount,
   scoreWorkout,
   type RecommendProfile,
   type ScorableWorkout,
@@ -113,6 +115,55 @@ describe('«Бережём зоны» (CARE)', () => {
     const relax = wk({ categorySlug: 'relaxation', level: 'beginner' });
     const other = wk({ categorySlug: 'spina', level: 'beginner' });
     expect(scoreWorkout(relax, profile)).toBeGreaterThan(scoreWorkout(other, profile));
+  });
+});
+
+describe('rankWorkoutsScored / recommendedCount (секции «Вам» / «Ещё»)', () => {
+  const profile: RecommendProfile = {
+    goal: 'Шея и плечи зажаты', // → категория spina
+    equipment: [],
+    level: 'Новичок',
+    time: '15–20 минут',
+  };
+
+  it('scored отсортирован по убыванию балла', () => {
+    const list = [
+      wk({ categorySlug: 'kor', equipment: ['коврик'] }), // слабое совпадение
+      wk({ categorySlug: 'spina', durationMin: 12 }), // цель + free + без инвентаря
+    ];
+    const scored = rankWorkoutsScored(list, profile);
+    expect(scored[0]!.workout.categorySlug).toBe('spina');
+    expect(scored[0]!.score).toBeGreaterThan(scored[1]!.score);
+  });
+
+  it('recommendedCount = число уверенных совпадений, в пределах [3..6]', () => {
+    // 8 тренировок в категории цели без инвентаря → все с положительным баллом,
+    // но секция «Вам» ограничена сверху шестью.
+    const many = Array.from({ length: 8 }, (_, i) =>
+      wk({ categorySlug: 'spina', durationMin: 10 + i }),
+    );
+    const scored = rankWorkoutsScored(many, profile);
+    expect(recommendedCount(scored, profile)).toBe(6);
+  });
+
+  it('когда совпадений мало — берём именно столько (не добиваем слабыми)', () => {
+    // 1 сильное (spina, без инвентаря) + 3 слабых (нужен инвентарь → отрицательный балл).
+    const list = [
+      wk({ categorySlug: 'spina', durationMin: 12 }),
+      wk({ categorySlug: 'kor', equipment: ['коврик'] }),
+      wk({ categorySlug: 'osanka', equipment: ['резинка'] }),
+      wk({ categorySlug: 'mobility', equipment: ['коврик'] }),
+    ];
+    const scored = rankWorkoutsScored(list, profile);
+    // Ровно одно положительное → секция «Вам» = 1 (min-«добивка» не тянет слабых вверх).
+    expect(recommendedCount(scored, profile)).toBe(1);
+  });
+
+  it('нет профиля → recommendedCount 0 (единый список без секций)', () => {
+    const list = [wk({}), wk({ categorySlug: 'kor' })];
+    const scored = rankWorkoutsScored(list, null);
+    expect(scored.every((entry) => entry.score === 0)).toBe(true);
+    expect(recommendedCount(scored, null)).toBe(0);
   });
 });
 
@@ -227,6 +278,9 @@ describe('GET /recommendations', () => {
     // Верхняя тренировка — из kor.
     expect(body.workouts[0].categorySlug).toBe('kor');
     expect(body.recommendedPlan.slug).toBe('plan-soft-core-5');
+    // Секция «Точно вам»: есть уверенные совпадения, но не весь каталог.
+    expect(body.recommendedCount).toBeGreaterThan(0);
+    expect(body.recommendedCount).toBeLessThan(body.workouts.length);
   });
 
   it('новичок: advanced-тренировки не в самом топе относительно beginner той же цели', async () => {

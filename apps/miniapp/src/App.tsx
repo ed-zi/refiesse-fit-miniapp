@@ -62,6 +62,8 @@ const steps: Array<{ id: Screen; label: string }> = [
 /** Персональная подборка с рекомендательного API (GET /recommendations). */
 type Recommendations = {
   workouts: Workout[]
+  /** Сколько верхних workouts — уверенные совпадения (секция «Точно вам»). */
+  recommendedCount: number
   recommendedPlan: Program | null
 }
 
@@ -252,7 +254,7 @@ function App() {
       .then((recs) => setRecommendations(recs))
       .catch(() => {
         // Пустая подборка вместо вечной загрузки — экран покажет мягкую заглушку.
-        setRecommendations({ workouts: [], recommendedPlan: null })
+        setRecommendations({ workouts: [], recommendedCount: 0, recommendedPlan: null })
       })
       .finally(() => setRecsLoading(false))
   }
@@ -1111,6 +1113,26 @@ function RecommendationsScreen({
 }) {
   const goal = data.me.onboarding?.goal
   const plan = recommendations?.recommendedPlan ?? null
+  const [showMore, setShowMore] = useState(false)
+
+  const workouts = recommendations?.workouts ?? []
+  const recCount = recommendations?.recommendedCount ?? 0
+  // Делим на «Точно вам» и «Ещё», только если сервер выделил часть как уверенные
+  // совпадения и при этом есть остаток. Иначе — единый список без секций.
+  const hasSplit = recCount > 0 && recCount < workouts.length
+  const primary = hasSplit ? workouts.slice(0, recCount) : workouts
+  const extra = hasSplit ? workouts.slice(recCount) : []
+
+  const renderCard = (workout: Workout) => (
+    <WorkoutCard
+      isPremium={workout.isPremium}
+      key={workout.slug}
+      meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
+      onClick={() => openWorkout(workout)}
+      title={workout.title}
+      thumb={workout.thumbColor}
+    />
+  )
 
   return (
     <section className="screen">
@@ -1131,17 +1153,35 @@ function RecommendationsScreen({
           <div className="skeleton sk-card" />
           <div className="skeleton sk-card" />
         </>
-      ) : recommendations && recommendations.workouts.length > 0 ? (
-        recommendations.workouts.map((workout) => (
-          <WorkoutCard
-            isPremium={workout.isPremium}
-            key={workout.slug}
-            meta={[`${workout.durationMin} мин`, levelPillLabels[workout.level]]}
-            onClick={() => openWorkout(workout)}
-            title={workout.title}
-            thumb={workout.thumbColor}
-          />
-        ))
+      ) : workouts.length > 0 ? (
+        <>
+          {hasSplit && (
+            <div className="section-title">
+              <h3>Точно вам</h3>
+              <small>{primary.length}</small>
+            </div>
+          )}
+          {primary.map(renderCard)}
+
+          {extra.length > 0 &&
+            (showMore ? (
+              <>
+                <div className="section-title">
+                  <h3>Ещё мягкие варианты</h3>
+                  <small>{extra.length}</small>
+                </div>
+                {extra.map(renderCard)}
+              </>
+            ) : (
+              <button
+                className="cta ghost full stacked"
+                onClick={() => setShowMore(true)}
+                type="button"
+              >
+                {`Ещё ${extra.length} ${plural(extra.length, 'вариант', 'варианта', 'вариантов')}`}
+              </button>
+            ))}
+        </>
       ) : (
         <div className="empty-state">
           <h3>Пока собираем</h3>

@@ -69,7 +69,17 @@ export interface ApiClient {
   /** Создаёт платёж провайдера (ЮKassa) и возвращает URL страницы оплаты. */
   createPayment(): Promise<{ confirmationUrl: string }>
   /** Персональная подборка: ранжированные тренировки + рекомендованный план. */
-  getRecommendations(): Promise<{ workouts: Workout[]; recommendedPlan: Program | null }>
+  getRecommendations(): Promise<RecommendationsResult>
+}
+
+/**
+ * Ответ подборки: workouts ранжированы, первые recommendedCount — уверенные
+ * совпадения (секция «Точно вам»), остальные — «Ещё». 0 — единый список.
+ */
+export interface RecommendationsResult {
+  workouts: Workout[]
+  recommendedCount: number
+  recommendedPlan: Program | null
 }
 
 /** Ошибка API с машинным кодом (для UI-состояний и логики повторов). */
@@ -217,8 +227,10 @@ function createMockApiClient(): ApiClient {
       // App в mock-режиме имитирует немедленный доступ (paywall → success).
       Promise.resolve({ confirmationUrl: 'https://example.test/mock-payment' }),
     getRecommendations: () => {
-      // Имитация серверного скоринга: ставим совпадения по цели/уровню
-      // сохранённого подбора вперёд, режем до топ-4. План — первый из mock.
+      // Имитация серверного скоринга: совпадения по цели/уровню сохранённого
+      // подбора вперёд. Возвращаем ВЕСЬ список ранжированным + recommendedCount
+      // (сколько верхних — уверенные совпадения по цели), чтобы фронт показал
+      // секции «Точно вам» / «Ещё». План — первый из mock.
       const goal = onboarding?.goal
       // Живой профиль: сдвигаем предпочитаемый уровень (LP-1).
       const bias = feedbackBias()
@@ -230,8 +242,12 @@ function createMockApiClient(): ApiClient {
           Math.abs(levelRank[workout.level] - preferred)
         return score(a) - score(b)
       })
+      const goalMatches = goal ? ranked.filter((workout) => workout.goal === goal).length : 0
+      const recommendedCount =
+        goal === undefined ? 0 : Math.max(3, Math.min(6, Math.max(1, goalMatches)))
       return Promise.resolve({
-        workouts: ranked.slice(0, 4),
+        workouts: ranked,
+        recommendedCount: Math.min(recommendedCount, ranked.length),
         recommendedPlan: mockPrograms[0] ?? null,
       })
     },
@@ -449,8 +465,7 @@ function createHttpApiClient(baseUrl: string): ApiClient {
     },
     createPayment: () =>
       request<{ confirmationUrl: string }>('/api/payments/create', { method: 'POST' }),
-    getRecommendations: () =>
-      request<{ workouts: Workout[]; recommendedPlan: Program | null }>('/recommendations'),
+    getRecommendations: () => request<RecommendationsResult>('/recommendations'),
   }
 }
 

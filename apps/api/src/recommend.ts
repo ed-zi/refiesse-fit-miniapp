@@ -199,6 +199,53 @@ export function rankWorkouts<T extends ScorableWorkout>(
     .map((entry) => entry.workout);
 }
 
+/**
+ * Ранжирует и возвращает балл рядом с тренировкой — нужно, чтобы отделить
+ * «уверенные совпадения» (секция «Вам») от остального (секция «Ещё»).
+ * profile === null: скоринга нет, у всех балл 0 (порядок — как в rankWorkouts).
+ */
+export function rankWorkoutsScored<T extends ScorableWorkout>(
+  workouts: readonly T[],
+  profile: RecommendProfile | null,
+): Array<{ workout: T; score: number }> {
+  if (profile === null) {
+    return rankWorkouts(workouts, null).map((workout) => ({ workout, score: 0 }));
+  }
+  return [...workouts]
+    .map((workout) => ({ workout, score: scoreWorkout(workout, profile) }))
+    .sort((a, b) => b.score - a.score || a.workout.durationMin - b.workout.durationMin);
+}
+
+/** Балл, с которого тренировка считается уверенным совпадением (строго > 0). */
+export const RECOMMEND_SCORE_THRESHOLD = 1;
+
+/** Топ-N как мягкий старт, когда явных совпадений нет вовсе. */
+export const RECOMMEND_FALLBACK = 3;
+
+/** Верхняя граница секции «Вам» — чтобы она не разрослась во весь каталог. */
+export const RECOMMEND_MAX = 6;
+
+/**
+ * Сколько верхних тренировок отнести в секцию «Точно вам».
+ *   нет профиля         → 0 (не делим — показываем единым списком)
+ *   есть совпадения >0  → ровно их число, но не больше RECOMMEND_MAX
+ *                         (слабыми не «добиваем» — честнее показать 1–2)
+ *   совпадений нет      → топ-3 как мягкий старт (экран не пустой сверху)
+ */
+export function recommendedCount(
+  scored: ReadonlyArray<{ score: number }>,
+  profile: RecommendProfile | null,
+): number {
+  if (profile === null) {
+    return 0;
+  }
+  const positive = scored.filter((entry) => entry.score >= RECOMMEND_SCORE_THRESHOLD).length;
+  if (positive === 0) {
+    return Math.min(RECOMMEND_FALLBACK, scored.length);
+  }
+  return Math.min(positive, RECOMMEND_MAX);
+}
+
 /** План для выбора: slug + категории его дней (null — день без тренировки). */
 export interface RankablePlan {
   slug: string;
