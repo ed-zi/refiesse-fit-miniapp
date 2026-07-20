@@ -92,6 +92,17 @@ model User {
   @@map("users")
 }
 
+// Картинка контента (STEP): бинарь хранится в БД (bytea) — переживает редеплой
+// Railway без внешнего S3/volume. Отдаётся публично по id (GET /images/:id).
+model Image {
+  id        String   @id @default(cuid())
+  mimeType  String   @map("mime_type")
+  data      Bytes
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("images")
+}
+
 // Категория каталога (Спина / Осанка / Кор / Расслабление и т.п.).
 model Category {
   id        String    @id @default(cuid())
@@ -117,6 +128,9 @@ model Workout {
   access      AccessType   @default(free) // free/premium вместо булева is_premium
   videoUrl    String?      @map("video_url") // отдаётся только при наличии доступа
   description String
+  // Пошаговое иллюстрированное описание (STEP): JSON [{ text, imageId? }].
+  // Альтернатива видео — «как делать» с картинками. Гейтится как videoUrl.
+  steps       Json?
   cautions    String       // блок осторожностей, всегда показывается
   thumbColor  String?      @map("thumb_color") // визуальный ключ карточки (Soft System)
   isPublished Boolean      @default(true) @map("is_published")

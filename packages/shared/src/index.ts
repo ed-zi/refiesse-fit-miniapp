@@ -25,6 +25,14 @@ export interface Category {
   sortOrder: number
 }
 
+/** Шаг иллюстрированной инструкции «как делать» (STEP). */
+export interface WorkoutStep {
+  text: string
+  /** URL картинки шага (или null). В HTTP-режиме бэкенд отдаёт относительный
+   *  путь /images/{id}; клиент резолвит его в абсолютный по API base. */
+  imageUrl?: string | null
+}
+
 /** Единица контента — мягкая тренировка. Поля = столбцы content matrix (S0-5). */
 export interface Workout {
   id: string
@@ -42,6 +50,8 @@ export interface Workout {
   /** URL видео. Бэкенд отдаёт его только при наличии доступа, иначе null/отсутствует. */
   videoUrl?: string | null
   description: string
+  /** Пошаговое иллюстрированное описание (STEP); есть только в детальной карточке. */
+  steps?: WorkoutStep[]
   /** Блок осторожностей — показывается всегда, непустая строка. */
   cautions: string
   /** Slug категории (Category.slug). */

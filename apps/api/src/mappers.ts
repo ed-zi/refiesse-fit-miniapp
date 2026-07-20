@@ -42,10 +42,38 @@ export interface WorkoutCardDto {
   thumbColor: string | null;
 }
 
-/** Детальная карточка: shared Workout + videoUrl. */
+/** Шаг иллюстрированной инструкции (STEP). imageUrl — относительный путь или null. */
+export interface WorkoutStepDto {
+  text: string;
+  imageUrl: string | null;
+}
+
+/** Детальная карточка: shared Workout + videoUrl + пошаговое описание. */
 export interface WorkoutDetailDto extends WorkoutCardDto {
   /** null, если premium без доступа (метаданные отдаём, контент — нет). */
   videoUrl: string | null;
+  /** Пошаговое описание (STEP); пусто, если контент закрыт. */
+  steps: WorkoutStepDto[];
+}
+
+/** Безопасно разбирает Workout.steps (JSON) в DTO-шаги. */
+function parseSteps(raw: unknown): WorkoutStepDto[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const steps: WorkoutStepDto[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) {
+      continue;
+    }
+    const entry = item as Record<string, unknown>;
+    const text = entry['text'];
+    if (typeof text === 'string' && text.trim() !== '') {
+      const imageId = typeof entry['imageId'] === 'string' ? entry['imageId'] : null;
+      steps.push({ text, imageUrl: imageId ? `/images/${imageId}` : null });
+    }
+  }
+  return steps;
 }
 
 /** = shared ProgramDay (workoutSlug вместо внутреннего workoutId). */
@@ -107,6 +135,7 @@ export function toWorkoutDetailDto(
   return {
     ...toWorkoutCardDto(workout, { unlocked: options.includeVideo }),
     videoUrl: options.includeVideo ? workout.videoUrl : null,
+    steps: options.includeVideo ? parseSteps(workout.steps) : [],
     isLocked: !options.includeVideo,
   };
 }

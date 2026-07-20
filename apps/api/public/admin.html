@@ -89,6 +89,10 @@
         <label>Описание <textarea id="wf-description" rows="2"></textarea></label>
         <label>Осторожности <textarea id="wf-cautions" rows="2"></textarea></label>
       </div>
+      <div style="margin-top:10px">
+        <div class="muted">Пошаговое описание «Как делать» — текст + картинка (необязательно)</div>
+        <div id="wf-steps"></div>
+      </div>
       <div class="row">
         <button id="wf-save" class="primary">Создать</button>
         <button id="wf-cancel">Отмена</button>
@@ -238,7 +242,7 @@
         '<td><button class="small toggle-access badge ' + (w.access === 'premium' ? 'premium' : 'free') + '">' + esc(w.access) + '</button></td>' +
         '<td><button class="small toggle-pub badge ' + (w.isPublished ? 'on' : 'off') + '">' + (w.isPublished ? 'опубликована' : 'скрыта') + '</button></td>' +
         '<td><input class="video-inp" value="' + esc(w.videoUrl || '') + '" placeholder="нет видео"> <button class="small save-video">Сохранить</button></td>' +
-        '<td><button class="small danger del-workout">Удалить</button></td>';
+        '<td><button class="small edit-steps">Шаги</button> <button class="small danger del-workout">Удалить</button></td>';
       tr.querySelector('.toggle-access').addEventListener('click', guard(async function () {
         await api('PUT', '/admin/workouts/' + w.id, { access: w.access === 'premium' ? 'free' : 'premium' });
         loadWorkouts();
@@ -258,12 +262,44 @@
         await api('DELETE', '/admin/workouts/' + w.id);
         loadWorkouts();
       }));
+      tr.querySelector('.edit-steps').addEventListener('click', function () {
+        var next = tr.nextElementSibling;
+        if (next && next.classList.contains('steps-editor-row')) { next.remove(); return; }
+        var row = document.createElement('tr');
+        row.className = 'steps-editor-row';
+        var td = document.createElement('td');
+        td.colSpan = 7;
+        var panel = document.createElement('div');
+        panel.className = 'panel';
+        var title = document.createElement('strong');
+        title.textContent = 'Пошаговое описание «' + w.title + '»';
+        var box = document.createElement('div');
+        box.style.marginTop = '8px';
+        var save = document.createElement('button');
+        save.className = 'primary small';
+        save.textContent = 'Сохранить шаги';
+        save.style.marginTop = '8px';
+        panel.appendChild(title);
+        panel.appendChild(box);
+        panel.appendChild(save);
+        td.appendChild(panel);
+        row.appendChild(td);
+        tr.insertAdjacentElement('afterend', row);
+        var editor = makeStepsEditor(box, w.steps || []);
+        save.addEventListener('click', guard(async function () {
+          await api('PUT', '/admin/workouts/' + w.id, { steps: editor.getSteps() });
+          row.remove();
+        }));
+      });
       tbody.appendChild(tr);
     });
   });
 
+  var wfStepsEditor = null;
   $('#newWorkoutBtn').addEventListener('click', function () {
-    $('#workoutForm').style.display = $('#workoutForm').style.display === 'none' ? '' : 'none';
+    var show = $('#workoutForm').style.display === 'none';
+    $('#workoutForm').style.display = show ? '' : 'none';
+    if (show) { wfStepsEditor = makeStepsEditor($('#wf-steps'), []); }
   });
   $('#wf-cancel').addEventListener('click', function () { $('#workoutForm').style.display = 'none'; });
   $('#wf-save').addEventListener('click', guard(async function () {
@@ -280,11 +316,107 @@
       equipment: equipment,
       videoUrl: video === '' ? null : video,
       description: $('#wf-description').value.trim(),
-      cautions: $('#wf-cautions').value.trim()
+      cautions: $('#wf-cautions').value.trim(),
+      steps: wfStepsEditor ? wfStepsEditor.getSteps() : []
     });
     $('#workoutForm').style.display = 'none';
     loadWorkouts();
   }));
+
+  // Читает файл как data-URL (data:image/...;base64,...). Бэкенд срежет префикс.
+  function readAsDataURL(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Редактор пошагового описания: список шагов (текст + загрузка картинки).
+   * Возвращает { getSteps() } → [{ text, imageId }] (пустые тексты отброшены).
+   */
+  function makeStepsEditor(container, initialSteps) {
+    var steps = (initialSteps || []).map(function (s) {
+      return { text: s.text || '', imageId: s.imageId || null };
+    });
+    var list = document.createElement('div');
+    var addBtn = document.createElement('button');
+    addBtn.className = 'small';
+    addBtn.type = 'button';
+    addBtn.textContent = '+ Шаг';
+    container.innerHTML = '';
+    container.appendChild(list);
+    container.appendChild(addBtn);
+
+    function render() {
+      list.innerHTML = '';
+      steps.forEach(function (step, i) {
+        var box = document.createElement('div');
+        box.className = 'panel';
+        box.style.margin = '6px 0';
+
+        var top = document.createElement('div');
+        top.className = 'row';
+        var label = document.createElement('strong');
+        label.textContent = 'Шаг ' + (i + 1);
+        var del = document.createElement('button');
+        del.className = 'small danger';
+        del.type = 'button';
+        del.textContent = '✕';
+        del.style.marginLeft = 'auto';
+        del.addEventListener('click', function () { steps.splice(i, 1); render(); });
+        top.appendChild(label);
+        top.appendChild(del);
+
+        var ta = document.createElement('textarea');
+        ta.rows = 2;
+        ta.style.width = '100%';
+        ta.placeholder = 'Что делать на этом шаге';
+        ta.value = step.text;
+        ta.addEventListener('input', function () { step.text = ta.value; });
+
+        var imgRow = document.createElement('div');
+        imgRow.className = 'row';
+        var file = document.createElement('input');
+        file.type = 'file';
+        file.accept = 'image/png,image/jpeg,image/webp,image/gif';
+        var preview = document.createElement('img');
+        preview.style.maxHeight = '70px';
+        preview.style.borderRadius = '8px';
+        preview.style.display = step.imageId ? '' : 'none';
+        if (step.imageId) { preview.src = '/images/' + step.imageId; }
+        file.addEventListener('change', guard(async function () {
+          var f = file.files[0];
+          if (!f) return;
+          var dataUrl = await readAsDataURL(f);
+          var res = await api('POST', '/admin/images', { mimeType: f.type, data: dataUrl });
+          step.imageId = res.id;
+          preview.src = '/images/' + res.id;
+          preview.style.display = '';
+        }));
+        imgRow.appendChild(file);
+        imgRow.appendChild(preview);
+
+        box.appendChild(top);
+        box.appendChild(ta);
+        box.appendChild(imgRow);
+        list.appendChild(box);
+      });
+    }
+
+    addBtn.addEventListener('click', function () { steps.push({ text: '', imageId: null }); render(); });
+    render();
+
+    return {
+      getSteps: function () {
+        return steps
+          .filter(function (s) { return s.text.trim() !== ''; })
+          .map(function (s) { return { text: s.text.trim(), imageId: s.imageId }; });
+      }
+    };
+  }
 
   // ---------------- пользователи ----------------
   var searchUsers = guard(async function () {

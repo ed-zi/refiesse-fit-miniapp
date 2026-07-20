@@ -39,6 +39,16 @@ export const mockWorkouts: Workout[] = [
     videoUrl: 'https://www.youtube.com/watch?v=inpok4MKVLM',
     description:
       'Короткая практика для тех, кто провёл день за компьютером и чувствует напряжение в шее и плечах.',
+    // Демо пошагового описания (STEP): в проде картинки грузит Катя в админке.
+    steps: [
+      {
+        text: 'Сядьте ровно, макушкой мягко тянитесь вверх, плечи опустите вниз от ушей.',
+        imageUrl:
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23efeaff'/%3E%3Ccircle cx='160' cy='80' r='34' fill='%23a893ef'/%3E%3Crect x='120' y='120' width='80' height='44' rx='16' fill='%23c9bdf7'/%3E%3C/svg%3E",
+      },
+      { text: 'На выдохе медленно наклоните голову к правому плечу, задержитесь на 3–4 дыхания.' },
+      { text: 'Вернитесь в центр и повторите в другую сторону. Без рывков, по ощущениям.' },
+    ],
     cautions:
       'Если есть острая боль, онемение или недавняя травма — не идём через усилие.',
     categorySlug: 'spina',

@@ -2,6 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { makeRequireAdmin } from '../adminAuth.ts';
 import { AppError } from '../errors.ts';
+import type { Prisma } from '../generated/prisma/client.ts';
+
+/** Шаг иллюстрированной инструкции (STEP): текст + опц. id загруженной картинки. */
+const stepInputSchema = z.object({
+  text: z.string().min(1),
+  imageId: z.string().nullable().optional(),
+});
 
 /**
  * Admin CRUD контента (S3-4): workouts / categories / programs.
@@ -22,6 +29,7 @@ const workoutCreateSchema = z.object({
   access: z.enum(['free', 'premium']).default('free'),
   videoUrl: z.string().nullable().optional(),
   description: z.string().min(1),
+  steps: z.array(stepInputSchema).optional(),
   cautions: z.string().min(1),
   categoryId: z.string().min(1),
   isPublished: z.boolean().default(true),
@@ -37,6 +45,7 @@ const workoutUpdateSchema = z
     access: z.enum(['free', 'premium']),
     videoUrl: z.string().nullable(),
     description: z.string().min(1),
+    steps: z.array(stepInputSchema),
     cautions: z.string().min(1),
     categoryId: z.string().min(1),
     isPublished: z.boolean(),
@@ -126,9 +135,14 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
   /** POST /admin/workouts — создать. */
   app.post('/admin/workouts', adminOpts, async (request, reply) => {
     const data = workoutCreateSchema.parse(request.body ?? {});
+    const { steps, ...rest } = data;
     try {
       const workout = await app.prisma.workout.create({
-        data: { ...data, videoUrl: data.videoUrl ?? null },
+        data: {
+          ...rest,
+          videoUrl: rest.videoUrl ?? null,
+          ...(steps !== undefined ? { steps: steps as unknown as Prisma.InputJsonValue } : {}),
+        },
         include: { category: { select: { slug: true, title: true } } },
       });
       request.log.info({ workoutId: workout.id, slug: workout.slug }, 'admin workout created');
@@ -142,10 +156,14 @@ export function registerAdminContentRoutes(app: FastifyInstance): void {
   app.put('/admin/workouts/:id', adminOpts, async (request) => {
     const { id } = idParamsSchema.parse(request.params);
     const data = workoutUpdateSchema.parse(request.body ?? {});
+    const { steps, ...rest } = data;
     try {
       const workout = await app.prisma.workout.update({
         where: { id },
-        data,
+        data: {
+          ...rest,
+          ...(steps !== undefined ? { steps: steps as unknown as Prisma.InputJsonValue } : {}),
+        },
         include: { category: { select: { slug: true, title: true } } },
       });
       request.log.info({ workoutId: id, fields: Object.keys(data) }, 'admin workout updated');

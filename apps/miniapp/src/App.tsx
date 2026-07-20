@@ -1342,6 +1342,32 @@ function WorkoutScreen({
         <Fact value={equipmentFactValue(workout)} label="инвентарь" />
         <Fact value={levelFactLabels[workout.level]} label="уровень" />
       </div>
+      {workout.steps && workout.steps.length > 0 && (
+        <div className="steps-guide">
+          <div className="section-title">
+            <h3>Как делать</h3>
+            <small>если не хочется видео</small>
+          </div>
+          <ol className="steps-list">
+            {workout.steps.map((step, index) => (
+              <li className="step-item" key={index}>
+                <span className="step-num">{index + 1}</span>
+                <div className="step-body">
+                  {step.imageUrl && (
+                    <img
+                      className="step-img"
+                      src={step.imageUrl}
+                      alt={`Шаг ${index + 1}`}
+                      loading="lazy"
+                    />
+                  )}
+                  <p>{step.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       <div className="note">
         <b>Осторожно:</b> {workout.cautions}
       </div>

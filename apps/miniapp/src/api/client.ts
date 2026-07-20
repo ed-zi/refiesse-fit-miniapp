@@ -244,6 +244,26 @@ export const mockApiClient: ApiClient = createMockApiClient()
 // HTTP-реализация по контракту S2
 // ---------------------------------------------------------------------------
 
+/**
+ * Резолвит относительные пути картинок шагов (/images/{id}) в абсолютные по
+ * API base. Абсолютные URL и data:-URL оставляем как есть.
+ */
+function resolveStepImages(workout: Workout, apiRoot: string): Workout {
+  if (!workout.steps || workout.steps.length === 0) {
+    return workout
+  }
+  return {
+    ...workout,
+    steps: workout.steps.map((step) => ({
+      ...step,
+      imageUrl:
+        step.imageUrl && step.imageUrl.startsWith('/')
+          ? `${apiRoot}${step.imageUrl}`
+          : step.imageUrl,
+    })),
+  }
+}
+
 function buildQueryString(query?: CatalogQuery): string {
   if (!query) {
     return ''
@@ -366,7 +386,7 @@ function createHttpApiClient(baseUrl: string): ApiClient {
         const { workout } = await request<{ workout: Workout }>(
           `/workouts/${encodeURIComponent(slug)}`,
         )
-        return workout
+        return resolveStepImages(workout, root)
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           return null
@@ -376,7 +396,7 @@ function createHttpApiClient(baseUrl: string): ApiClient {
     },
     getWorkoutOfDay: async () => {
       const { workout } = await request<{ workout: Workout }>('/workouts/day')
-      return workout
+      return resolveStepImages(workout, root)
     },
     getPlans: async () => {
       const { items } = await request<{ items: Program[] }>('/plans')
