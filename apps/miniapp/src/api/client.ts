@@ -467,7 +467,9 @@ function createHttpApiClient(baseUrl: string): ApiClient {
       request<{ confirmationUrl: string }>('/api/payments/create', {
         method: 'POST',
         // email — для чека (ФФД); consent — согласие с офертой/ПДн (152-ФЗ).
-        body: JSON.stringify({ email, consent: true }),
+        // Передаём ОБЪЕКТ: request() сам делает JSON.stringify (иначе двойная
+        // сериализация — API получит строку вместо объекта и вернёт 400).
+        body: { email, consent: true },
       }),
     getRecommendations: () => request<RecommendationsResult>('/recommendations'),
   }
