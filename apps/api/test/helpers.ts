@@ -30,6 +30,9 @@ export const testConfig: AppConfig = {
   yookassaShopId: TEST_YOOKASSA_SHOP_ID,
   yookassaSecretKey: TEST_YOOKASSA_SECRET_KEY,
   yookassaReturnUrl: TEST_YOOKASSA_RETURN_URL,
+  // В тестах рекуррент включён — проверяем «полный» путь (save_payment_method).
+  // Разовый режим (flag=false) покрыт отдельным тестом в yookassa.test.ts.
+  yookassaRecurringEnabled: true,
   billingAutochargeEnabled: false,
   // Планировщик напоминаний в тестах не запускаем (buildApp не стартует таймер).
   remindersEnabled: false,

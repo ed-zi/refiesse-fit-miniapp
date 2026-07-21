@@ -160,9 +160,11 @@ export function registerPaymentRoutes(
       try {
         payment = await client.createPayment({
           amountRub: SUBSCRIPTION_PRICE_RUB,
-          description: 'Refiesse Fit — подписка на месяц',
+          description: 'Refiesse Fit — доступ на 30 дней',
           telegramUserId: Number(user.telegramUserId),
-          savePaymentMethod: true,
+          // Рекуррент за флагом: пока автоплатежи не подключены у ЮKassa, шлём
+          // разовый платёж (save_payment_method:false), иначе ЮKassa даёт 403.
+          savePaymentMethod: app.config.yookassaRecurringEnabled,
           returnUrl,
           idempotenceKey: randomUUID(),
           customerEmail: email,

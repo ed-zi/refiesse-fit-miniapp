@@ -1721,7 +1721,7 @@ function PaywallScreen({
           ))}
         </div>
         <div>
-          <p className="price-note">500 ₽ в месяц. Оплата картой на защищённой странице.</p>
+          <p className="price-note">500 ₽ за 30 дней доступа. Оплата картой на защищённой странице.</p>
 
           {/* E-mail для чека (ФФД) — без него ЮKassa не пробьёт чек. */}
           <label className="pay-field">
@@ -1756,7 +1756,7 @@ function PaywallScreen({
               >
                 согласие на обработку данных
               </button>
-              . Подписка продлевается автоматически, отменить можно в профиле.
+              . Разовый платёж — доступ на 30 дней, без автопродления.
             </span>
           </label>
 
@@ -1766,7 +1766,7 @@ function PaywallScreen({
             onClick={() => onPay(email.trim())}
             type="button"
           >
-            {payPending ? 'Открываем оплату…' : 'Открыть за 500 ₽/мес'}
+            {payPending ? 'Открываем оплату…' : 'Открыть за 500 ₽'}
           </button>
           <button className="cta ghost full stacked" onClick={onAlreadyPaid} type="button">
             Я уже оплатила

@@ -55,6 +55,16 @@ const envSchema = z.object({
   /** return_url — куда ЮKassa вернёт пользователя после оплаты (Mini App). */
   YOOKASSA_RETURN_URL: z.string().min(1).optional(),
   /**
+   * Рекуррентные платежи (автопродление). Default false: MVP-магазин ЮKassa без
+   * подключённых автоплатежей отклоняет save_payment_method с 403. Пока опция не
+   * подключена у ЮKassa — принимаем РАЗОВЫЕ платежи (доступ на 30 дней, без
+   * автосписания). Когда ЮKassa включит автоплатежи — ставим 'true'.
+   */
+  YOOKASSA_RECURRING_ENABLED: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .default(false),
+  /**
    * Включает автосписания (recurring) по расписанию. Default false — в MVP
    * стартуем с ручного продления, код автосписания заложен за флагом.
    */
@@ -96,6 +106,8 @@ export interface AppConfig {
   yookassaShopId: string | undefined;
   yookassaSecretKey: string | undefined;
   yookassaReturnUrl: string | undefined;
+  /** Рекуррент (автопродление). false → разовые платежи (save_payment_method off). */
+  yookassaRecurringEnabled: boolean;
   billingAutochargeEnabled: boolean;
   /** Мягкие напоминания (MOTIV-1): планировщик активен. */
   remindersEnabled: boolean;
@@ -165,6 +177,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     yookassaShopId: e.YOOKASSA_SHOP_ID,
     yookassaSecretKey: e.YOOKASSA_SECRET_KEY,
     yookassaReturnUrl: e.YOOKASSA_RETURN_URL,
+    yookassaRecurringEnabled: e.YOOKASSA_RECURRING_ENABLED,
     billingAutochargeEnabled: e.BILLING_AUTOCHARGE_ENABLED,
     remindersEnabled: e.REMINDERS_ENABLED,
     webappUrl: e.WEBAPP_URL,

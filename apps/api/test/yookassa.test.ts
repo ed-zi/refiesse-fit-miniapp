@@ -176,6 +176,42 @@ describe('POST /api/payments/create', () => {
     expect(res.json().error.code).toBe('PAYMENTS_DISABLED');
     sharedFake = fake; // восстановить
   });
+
+  it('рекуррент выключен → save_payment_method:false (разовый платёж)', async () => {
+    // Отдельное приложение с yookassaRecurringEnabled:false — как боевой магазин
+    // без подключённых автоплатежей (иначе ЮKassa даёт 403 на save_payment_method).
+    const oneTimeFake = new FakeYookassa();
+    oneTimeFake.createResult = makePayment({
+      id: 'pay_onetime',
+      confirmationUrl: 'https://yookassa.test/confirm/onetime',
+    });
+    const oneTimeApp = await buildApp(
+      { ...testConfig, yookassaRecurringEnabled: false },
+      { yookassaClientFactory: () => oneTimeFake },
+    );
+    await oneTimeApp.ready();
+    try {
+      const authRes = await oneTimeApp.inject({
+        method: 'POST',
+        url: '/auth/telegram',
+        payload: { initData: buildInitData({ user: { id: 920009, first_name: 'One' } }) },
+      });
+      const token = authRes.json().token as string;
+
+      const res = await oneTimeApp.inject({
+        method: 'POST',
+        url: '/api/payments/create',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { email: 'one@example.com', consent: true },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(oneTimeFake.created).toHaveLength(1);
+      expect(oneTimeFake.created[0]!.savePaymentMethod).toBe(false);
+    } finally {
+      await oneTimeApp.close();
+    }
+  });
 });
 
 describe('POST /api/payments/yookassa/webhook — подлинность через getPayment', () => {
