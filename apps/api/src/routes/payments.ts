@@ -8,6 +8,7 @@ import {
   computeExtendedExpiry,
 } from '../billing/subscription.ts';
 import { AppError } from '../errors.ts';
+import { sendTelegramMessage } from '../reminders.ts';
 import {
   YookassaError,
   YookassaHttpClient,
@@ -89,6 +90,43 @@ export function buildYookassaClient(
     secretKey: yookassaSecretKey,
     fetchImpl: options.yookassaFetch,
   });
+}
+
+/** Дата → «20.08.2026» для админ-уведомления. */
+const adminDateFmt = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+/**
+ * Уведомляет админов (ADMIN_TELEGRAM_IDS — Катя + владелец) об успешной оплате.
+ * Fire-and-forget: не блокирует ответ вебхуку ЮKassa (ей нужен быстрый 200).
+ * Пустой список админов → тихо ничего не делаем (в т.ч. в тестах).
+ */
+function notifyAdminsOfPayment(
+  app: FastifyInstance,
+  info: {
+    firstName: string | null;
+    telegramUserId: bigint;
+    email: string | null;
+    amountRub: number;
+    expiresAt: Date;
+  },
+): void {
+  const ids = app.config.adminTelegramIds;
+  if (ids.size === 0) {
+    return;
+  }
+  const text =
+    `💰 Оплата Refiesse Fit\n` +
+    `Клиент: ${info.firstName ?? '—'} (id ${Number(info.telegramUserId)})\n` +
+    `Сумма: ${info.amountRub} ₽\n` +
+    `Доступ до: ${adminDateFmt.format(info.expiresAt)}\n` +
+    `Email: ${info.email ?? '—'}`;
+  for (const id of ids) {
+    void sendTelegramMessage(app.config.botToken, id, text);
+  }
 }
 
 /** telegram_user_id из metadata платежа (строка цифр) → BigInt | null. */
@@ -304,6 +342,16 @@ export function registerPaymentRoutes(
         { paymentId, telegramUserId: Number(telegramUserId), expiresAt: expiresAt.toISOString() },
         'yookassa webhook applied: access opened',
       );
+
+      // Канал статы для админов: DM Кате и владельцу об оплате (не блокирует 200).
+      notifyAdminsOfPayment(app, {
+        firstName: user.firstName,
+        telegramUserId,
+        email: user.email,
+        amountRub: SUBSCRIPTION_PRICE_RUB,
+        expiresAt,
+      });
+
       return { status: 'ok' };
     },
   );

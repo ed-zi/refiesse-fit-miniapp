@@ -684,7 +684,9 @@ function App() {
                   payPending={payPending}
                 />
               )}
-              {screen === 'success' && <SuccessScreen data={data} go={go} />}
+              {screen === 'success' && (
+                <SuccessScreen data={data} go={go} openWorkout={openWorkout} />
+              )}
               {screen === 'progress' && (
                 <ProgressScreen
                   initial={profileInitial(data.me)}
@@ -1780,7 +1782,16 @@ function PaywallScreen({
   )
 }
 
-function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => void }) {
+function SuccessScreen({
+  data,
+  go,
+  openWorkout,
+}: {
+  data: AppData
+  go: (screen: Screen) => void
+  openWorkout: (workout: Workout) => void
+}) {
+  const workoutOfDay = data.workoutOfDay
   const plan = data.plans.find((program) => !program.isPremium) ?? data.plans[0] ?? null
   const { done, total } = data.progress.summary.planProgress
   const todayDay = plan?.days[done] ?? null
@@ -1794,23 +1805,38 @@ function SuccessScreen({ data, go }: { data: AppData; go: (screen: Screen) => vo
         <h2 className="compact-title">
           {accessUntil ? `Доступ открыт до ${accessUntil}` : 'Доступ открыт'}
         </h2>
-        <p className="lead">
-          Premium-планы и тренировки уже доступны. Начните с мягкого маршрута на
-          7 дней.
-        </p>
+        <p className="lead">Premium-планы и тренировки уже доступны. Начнём с мягкого?</p>
       </div>
+
       <div className="section-title">
         <h3>С чего начать</h3>
         <small>рекомендация</small>
       </div>
-      {plan && (
+      {/* Показываем тренировку дня (надёжнее плана), иначе — план, иначе ничего. */}
+      {workoutOfDay ? (
+        <WorkoutCard
+          isPremium={workoutOfDay.isPremium}
+          meta={[`${workoutOfDay.durationMin} мин`, levelPillLabels[workoutOfDay.level]]}
+          onClick={() => openWorkout(workoutOfDay)}
+          title={workoutOfDay.title}
+          thumb={workoutOfDay.thumbColor}
+        />
+      ) : plan ? (
         <ProgramCard
           note={todayDay ? `Сегодня: ${todayDay.title}` : null}
           onClick={() => go('plans')}
           percent={total > 0 ? Math.round((done / total) * 100) : 0}
           title={plan.title}
         />
-      )}
+      ) : null}
+
+      {/* Явная навигация дальше — чтобы экран не был тупиком. */}
+      <button className="cta full stacked" onClick={() => go('home')} type="button">
+        К тренировкам
+      </button>
+      <button className="cta secondary full stacked" onClick={() => go('catalog')} type="button">
+        Открыть каталог
+      </button>
     </section>
   )
 }
