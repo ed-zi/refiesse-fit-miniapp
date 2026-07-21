@@ -8,7 +8,12 @@ import {
   computeExtendedExpiry,
 } from '../billing/subscription.ts';
 import { AppError } from '../errors.ts';
-import { YookassaHttpClient, type YookassaApi } from '../yookassa/client.ts';
+import {
+  YookassaError,
+  YookassaHttpClient,
+  type YookassaApi,
+  type YookassaPayment,
+} from '../yookassa/client.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
 
 /**
@@ -151,15 +156,34 @@ export function registerPaymentRoutes(
         },
       });
 
-      const payment = await client.createPayment({
-        amountRub: SUBSCRIPTION_PRICE_RUB,
-        description: 'Refiesse Fit — подписка на месяц',
-        telegramUserId: Number(user.telegramUserId),
-        savePaymentMethod: true,
-        returnUrl,
-        idempotenceKey: randomUUID(),
-        customerEmail: email,
-      });
+      let payment: YookassaPayment;
+      try {
+        payment = await client.createPayment({
+          amountRub: SUBSCRIPTION_PRICE_RUB,
+          description: 'Refiesse Fit — подписка на месяц',
+          telegramUserId: Number(user.telegramUserId),
+          savePaymentMethod: true,
+          returnUrl,
+          idempotenceKey: randomUUID(),
+          customerEmail: email,
+        });
+      } catch (error) {
+        // ЮKassa отклонила запрос (напр. 403 «магазин не активирован для приёма
+        // платежей», неверные ключи, тест/боевой режим). Логируем ДОСЛОВНО
+        // статус и описание от ЮKassa — иначе причина не видна в логах.
+        if (error instanceof YookassaError) {
+          request.log.error(
+            { yookassaStatus: error.statusCode, yookassaMessage: error.message },
+            'yookassa createPayment rejected',
+          );
+          throw new AppError(
+            502,
+            'PAYMENT_PROVIDER_REJECTED',
+            `ЮKassa отклонила платёж (${error.statusCode}): ${error.message}`,
+          );
+        }
+        throw error;
+      }
 
       if (payment.confirmationUrl === null) {
         throw new AppError(502, 'PAYMENT_CREATE_FAILED', 'YooKassa did not return a confirmation URL');
