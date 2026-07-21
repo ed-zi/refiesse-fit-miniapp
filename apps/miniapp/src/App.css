@@ -1154,6 +1154,58 @@ button.video {
   white-space: nowrap;
 }
 
+/* Встроенная оплата ЮKassa — оверлей-лист поверх экрана. */
+.pay-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--color-overlay, rgba(30, 25, 48, 0.32));
+}
+
+.pay-sheet {
+  width: 100%;
+  max-height: 92%;
+  overflow: auto;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 16px 16px 22px;
+  box-shadow: 0 -16px 40px rgba(30, 25, 48, 0.2);
+}
+
+.pay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pay-head strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.pay-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pay-widget {
+  min-height: 220px;
+}
+
+.pay-failed {
+  padding: 8px 0 4px;
+}
+
 .toast {
   position: absolute;
   left: 24px;

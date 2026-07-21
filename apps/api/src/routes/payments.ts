@@ -164,12 +164,11 @@ export function registerPaymentRoutes(
       preHandler: authenticate,
       config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     },
-    async (request): Promise<{ confirmationUrl: string }> => {
+    async (request): Promise<{ confirmationToken: string }> => {
       const client = getClientOr503();
+      // return_url для embedded не обязателен (нужен только для 3DS-возврата) —
+      // передаём, если задан. Виджет остаётся внутри мини-аппы.
       const returnUrl = app.config.yookassaReturnUrl;
-      if (returnUrl === undefined) {
-        throw new AppError(503, 'PAYMENTS_DISABLED', 'YOOKASSA_RETURN_URL is not configured');
-      }
 
       // Email (для чека) + согласие (оферта/ПДн) обязательны: без email ЮKassa
       // не пробьёт чек, без согласия нельзя брать оплату и хранить ПДн.
@@ -206,6 +205,7 @@ export function registerPaymentRoutes(
           returnUrl,
           idempotenceKey: randomUUID(),
           customerEmail: email,
+          embedded: true,
         });
       } catch (error) {
         // ЮKassa отклонила запрос (напр. 403 «магазин не активирован для приёма
@@ -225,15 +225,19 @@ export function registerPaymentRoutes(
         throw error;
       }
 
-      if (payment.confirmationUrl === null) {
-        throw new AppError(502, 'PAYMENT_CREATE_FAILED', 'YooKassa did not return a confirmation URL');
+      if (payment.confirmationToken === null) {
+        throw new AppError(
+          502,
+          'PAYMENT_CREATE_FAILED',
+          'YooKassa did not return a confirmation token',
+        );
       }
 
       request.log.info(
         { paymentId: payment.id, telegramUserId: Number(user.telegramUserId) },
         'yookassa payment created',
       );
-      return { confirmationUrl: payment.confirmationUrl };
+      return { confirmationToken: payment.confirmationToken };
     },
   );
 

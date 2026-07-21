@@ -70,6 +70,24 @@ describe('YookassaHttpClient — чек (receipt)', () => {
     expect(captured.body?.['receipt']).toBeUndefined();
   });
 
+  it('embedded:true → confirmation.type=embedded (встроенный виджет)', async () => {
+    const captured: Captured = { body: null };
+    const client = clientCapturing(captured);
+
+    await client.createPayment({
+      amountRub: 500,
+      description: 'Refiesse Fit',
+      telegramUserId: 111,
+      savePaymentMethod: false,
+      idempotenceKey: 'idem-emb',
+      customerEmail: 'k@example.com',
+      embedded: true,
+    });
+
+    const confirmation = captured.body?.['confirmation'] as { type?: string } | undefined;
+    expect(confirmation?.type).toBe('embedded');
+  });
+
   it('createRecurring с email → receipt для чека при автосписании', async () => {
     const captured: Captured = { body: null };
     const client = clientCapturing(captured);

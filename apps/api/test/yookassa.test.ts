@@ -22,6 +22,7 @@ function makePayment(overrides: Partial<YookassaPayment> = {}): YookassaPayment 
     status: overrides.status ?? 'succeeded',
     paid: overrides.paid ?? true,
     confirmationUrl: overrides.confirmationUrl ?? 'https://yookassa.test/confirm/pay_test',
+    confirmationToken: overrides.confirmationToken ?? 'ct_test_token',
     paymentMethodId: overrides.paymentMethodId ?? 'pm_saved_1',
     paymentMethodSaved: overrides.paymentMethodSaved ?? true,
     metadata: overrides.metadata ?? {},
@@ -127,11 +128,11 @@ describe('POST /api/payments/create', () => {
     expect(fake.created).toHaveLength(0);
   });
 
-  it('с JWT + email/согласие → confirmationUrl; email в чеке и согласие сохранены', async () => {
+  it('с JWT + email/согласие → confirmationToken (embedded); email в чеке и согласие', async () => {
     const token = await authAs(920001);
     fake.createResult = makePayment({
       id: 'pay_created',
-      confirmationUrl: 'https://yookassa.test/confirm/xyz',
+      confirmationToken: 'ct_xyz',
     });
 
     const res = await app.inject({
@@ -142,13 +143,14 @@ describe('POST /api/payments/create', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ confirmationUrl: 'https://yookassa.test/confirm/xyz' });
+    // Встроенный виджет: отдаём токен, а не URL.
+    expect(res.json()).toEqual({ confirmationToken: 'ct_xyz' });
     expect(fake.created).toHaveLength(1);
     const createParams = fake.created[0]!;
     expect(createParams.amountRub).toBe(500);
     expect(createParams.savePaymentMethod).toBe(true);
     expect(createParams.telegramUserId).toBe(920001);
-    expect(createParams.returnUrl).toBe(testConfig.yookassaReturnUrl);
+    expect(createParams.embedded).toBe(true);
     // Email проброшен для чека (ФФД).
     expect(createParams.customerEmail).toBe('katya@example.com');
 

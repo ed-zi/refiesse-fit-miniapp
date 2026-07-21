@@ -26,6 +26,8 @@ export interface YookassaPayment {
   paid: boolean;
   /** URL платёжной страницы (для confirmation.type = redirect). */
   confirmationUrl: string | null;
+  /** Токен встроенного виджета (для confirmation.type = embedded). */
+  confirmationToken: string | null;
   /** Сохранённый способ оплаты (при save_payment_method и успехе). */
   paymentMethodId: string | null;
   /** Признак, что способ можно использовать для recurring. */
@@ -39,13 +41,19 @@ export interface CreatePaymentParams {
   description: string;
   telegramUserId: number | string;
   savePaymentMethod: boolean;
-  returnUrl: string;
+  /** return_url: обязателен для redirect; для embedded — только для 3DS-возврата. */
+  returnUrl?: string;
   idempotenceKey: string;
   /**
    * E-mail плательщика для чека (ФФД). Если задан — в платёж добавляется receipt,
    * и ЮKassa пробивает чек через облачную кассу. Без контакта чек не пробить.
    */
   customerEmail?: string;
+  /**
+   * true → confirmation.type=embedded (встроенный виджет, confirmation_token).
+   * false/undefined → confirmation.type=redirect (страница ЮKassa, confirmation_url).
+   */
+  embedded?: boolean;
 }
 
 export interface CreateRecurringParams {
@@ -125,6 +133,10 @@ function normalizePayment(raw: unknown): YookassaPayment {
       typeof confirmation['confirmation_url'] === 'string'
         ? confirmation['confirmation_url']
         : null,
+    confirmationToken:
+      typeof confirmation['confirmation_token'] === 'string'
+        ? confirmation['confirmation_token']
+        : null,
     paymentMethodId:
       typeof paymentMethod['id'] === 'string' ? paymentMethod['id'] : null,
     paymentMethodSaved: paymentMethod['saved'] === true,
@@ -183,10 +195,16 @@ export class YookassaHttpClient implements YookassaApi {
   }
 
   async createPayment(params: CreatePaymentParams): Promise<YookassaPayment> {
+    const confirmation = params.embedded
+      ? {
+          type: 'embedded',
+          ...(params.returnUrl ? { return_url: params.returnUrl } : {}),
+        }
+      : { type: 'redirect', return_url: params.returnUrl };
     const body = {
       amount: { value: toAmountValue(params.amountRub), currency: CURRENCY },
       capture: true,
-      confirmation: { type: 'redirect', return_url: params.returnUrl },
+      confirmation,
       description: params.description,
       save_payment_method: params.savePaymentMethod,
       metadata: { telegram_user_id: String(params.telegramUserId) },

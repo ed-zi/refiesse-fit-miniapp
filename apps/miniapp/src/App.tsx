@@ -22,6 +22,7 @@ import { doneVerbLabel, effectiveCareAreas, isValidEmail } from '@refiesse-fit/s
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
 import { loadYouTubeIframeApi, parseYouTubeId, type YouTubePlayer } from './youtube'
+import { loadYooKassaWidget, type YooKassaCheckout } from './yookassa'
 import {
   NO_EQUIPMENT,
   type OnboardingStepDef,
@@ -159,6 +160,8 @@ function App() {
   const [selectedWorkoutSlug, setSelectedWorkoutSlug] = useState<string | null>(null)
   const [workoutDetail, setWorkoutDetail] = useState<Workout | null>(null)
   const [payPending, setPayPending] = useState(false)
+  // confirmation_token встроенного виджета ЮKassa: не null → показываем виджет.
+  const [paymentToken, setPaymentToken] = useState<string | null>(null)
   const [recommendations, setRecommendations] = useState<Recommendations | null>(null)
   const [recsLoading, setRecsLoading] = useState(false)
   // Живой профиль (LP-1): slug тренировки, по которой показываем микро-вопрос
@@ -387,10 +390,9 @@ function App() {
     setPayPending(true)
     void apiClient
       .createPayment(email)
-      .then(({ confirmationUrl }) => {
-        openExternalLink(confirmationUrl)
-        // Подстраховка к поллингу по фокусу: одна отложенная проверка доступа.
-        window.setTimeout(() => refreshAccessRef.current(), 8000)
+      .then(({ confirmationToken }) => {
+        // Встроенный виджет ЮKassa — оплата прямо в мини-аппе (без браузера).
+        setPaymentToken(confirmationToken)
       })
       .catch(() => {
         // Касса не настроена (503 PAYMENTS_DISABLED) или сеть: пробуем запаску.
@@ -404,6 +406,16 @@ function App() {
       .finally(() => {
         setPayPending(false)
       })
+  }
+
+  /** Виджет ЮKassa сообщил об успешной оплате. Доступ откроет вебхук — закрываем
+   *  виджет и несколько раз тихо перепроверяем /access (webhook приходит с
+   *  небольшой задержкой). Первый успех переключит на экран «Доступ». */
+  function onPaymentSuccess() {
+    setPaymentToken(null)
+    refreshAccessRef.current()
+    window.setTimeout(() => refreshAccessRef.current(), 2500)
+    window.setTimeout(() => refreshAccessRef.current(), 6000)
   }
 
   /** Открывает карточку тренировки: закрытый контент ведёт на Locked. */
@@ -716,6 +728,13 @@ function App() {
                 <FeedbackPrompt
                   onAnswer={submitFeedback}
                   onDismiss={() => setFeedbackSlug(null)}
+                />
+              )}
+              {paymentToken && (
+                <PaymentWidget
+                  token={paymentToken}
+                  onClose={() => setPaymentToken(null)}
+                  onSuccess={onPaymentSuccess}
                 />
               )}
               <BottomNav current={screen} go={go} />
@@ -1565,6 +1584,82 @@ function WorkoutScreen({
  * Пост-тренировочный микро-вопрос (живой профиль, LP-1). Мягкая карточка снизу:
  * один вопрос, три ответа в одно касание, без давления — можно закрыть.
  */
+/**
+ * Встроенная оплата ЮKassa (VID-стиль оверлей). Рендерит виджет по
+ * confirmation_token прямо в мини-аппе — без ухода в браузер. По событию
+ * success виджета вызываем onSuccess (App перепроверит доступ). Ошибка загрузки
+ * скрипта / оплаты → показываем мягкую заглушку с кнопкой «Закрыть».
+ */
+function PaymentWidget({
+  token,
+  onClose,
+  onSuccess,
+}: {
+  token: string
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const onSuccessRef = useRef(onSuccess)
+  onSuccessRef.current = onSuccess
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let checkout: YooKassaCheckout | null = null
+    let cancelled = false
+    void loadYooKassaWidget()
+      .then((Widget) => {
+        if (cancelled || !containerRef.current) {
+          return
+        }
+        checkout = new Widget({
+          confirmation_token: token,
+          error_callback: () => setFailed(true),
+        })
+        checkout.on('success', () => onSuccessRef.current())
+        void checkout.render(containerRef.current)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFailed(true)
+        }
+      })
+    return () => {
+      cancelled = true
+      try {
+        checkout?.destroy()
+      } catch {
+        // виджет мог не смонтироваться — игнорируем
+      }
+    }
+  }, [token])
+
+  return (
+    <div className="pay-overlay" role="dialog" aria-label="Оплата">
+      <div className="pay-sheet">
+        <div className="pay-head">
+          <strong>Оплата доступа</strong>
+          <button className="pay-close" onClick={onClose} type="button" aria-label="Закрыть">
+            ✕
+          </button>
+        </div>
+        {failed ? (
+          <div className="pay-failed">
+            <p className="lead">
+              Не удалось загрузить оплату. Проверьте связь и попробуйте ещё раз.
+            </p>
+            <button className="cta full" onClick={onClose} type="button">
+              Закрыть
+            </button>
+          </div>
+        ) : (
+          <div className="pay-widget" ref={containerRef} />
+        )}
+      </div>
+    </div>
+  )
+}
+
 function FeedbackPrompt({
   onAnswer,
   onDismiss,
