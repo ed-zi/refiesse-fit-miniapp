@@ -8,9 +8,17 @@ import {
   computeExtendedExpiry,
 } from '../billing/subscription.ts';
 import { AppError } from '../errors.ts';
-import { LEGAL_DOC_VERSION } from '@refiesse-fit/shared';
 import { YookassaHttpClient, type YookassaApi } from '../yookassa/client.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
+
+/**
+ * Версия юр. документов (оферта + политика), которую фиксируем в согласии
+ * пользователя (152-ФЗ). Держим локально в API: образ apps/api собирается
+ * ИЗОЛИРОВАННО (Root Directory = apps/api) и не видит packages/shared —
+ * кросс-пакетный импорт уронил бы старт сервиса. Значение синхронно с
+ * shared LEGAL_DOC_VERSION (меняем в обоих местах при обновлении текста).
+ */
+const LEGAL_DOC_VERSION = '2026-07-21';
 
 /**
  * ЮKassa-платежи (P1).
