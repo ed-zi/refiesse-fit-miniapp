@@ -8,6 +8,7 @@ import {
   computeExtendedExpiry,
 } from '../billing/subscription.ts';
 import { AppError } from '../errors.ts';
+import { LEGAL_DOC_VERSION } from '@refiesse-fit/shared';
 import { YookassaHttpClient, type YookassaApi } from '../yookassa/client.ts';
 import type { Prisma } from '../generated/prisma/client.ts';
 
@@ -26,6 +27,16 @@ import type { Prisma } from '../generated/prisma/client.ts';
  */
 
 const SUBSCRIPTION_PRICE_RUB = 500;
+
+/**
+ * Тело POST /api/payments/create. Чек ЮKassa (ФФД) требует контакт плательщика —
+ * без email платёж не создать. consent=true — согласие с офертой и обработкой
+ * ПДн (152-ФЗ); фиксируем факт/дату/версию в пользователе.
+ */
+const createBodySchema = z.object({
+  email: z.string().trim().email(),
+  consent: z.literal(true),
+});
 
 const webhookSchema = z.looseObject({
   event: z.string().optional(),
@@ -109,10 +120,28 @@ export function registerPaymentRoutes(
         throw new AppError(503, 'PAYMENTS_DISABLED', 'YOOKASSA_RETURN_URL is not configured');
       }
 
+      // Email (для чека) + согласие (оферта/ПДн) обязательны: без email ЮKassa
+      // не пробьёт чек, без согласия нельзя брать оплату и хранить ПДн.
+      const parsed = createBodySchema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        throw new AppError(400, 'CONSENT_REQUIRED', 'Требуется email и согласие с офертой');
+      }
+      const email = parsed.data.email;
+
       const user = await app.prisma.user.findUnique({ where: { id: request.user.userId } });
       if (!user) {
         throw new AppError(401, 'UNAUTHORIZED', 'User for this token no longer exists');
       }
+
+      // Фиксируем контакт и факт согласия (152-ФЗ): дата + версия документов.
+      await app.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email,
+          consentAcceptedAt: new Date(),
+          consentDocVersion: LEGAL_DOC_VERSION,
+        },
+      });
 
       const payment = await client.createPayment({
         amountRub: SUBSCRIPTION_PRICE_RUB,
@@ -121,6 +150,7 @@ export function registerPaymentRoutes(
         savePaymentMethod: true,
         returnUrl,
         idempotenceKey: randomUUID(),
+        customerEmail: email,
       });
 
       if (payment.confirmationUrl === null) {

@@ -18,7 +18,7 @@ import type {
   WorkoutFeedbackRating,
   WorkoutLevel,
 } from '@refiesse-fit/shared'
-import { doneVerbLabel, effectiveCareAreas } from '@refiesse-fit/shared'
+import { doneVerbLabel, effectiveCareAreas, isValidEmail } from '@refiesse-fit/shared'
 import { apiClient, isHttpMode } from './api/client'
 import { openExternalLink } from './telegram'
 import { loadYouTubeIframeApi, parseYouTubeId, type YouTubePlayer } from './youtube'
@@ -373,8 +373,9 @@ function App() {
     }
   }, [])
 
-  /** CTA paywall'а: создать платёж ЮKassa и уйти на страницу оплаты. */
-  function startPayment() {
+  /** CTA paywall'а: создать платёж ЮKassa и уйти на страницу оплаты.
+   *  email — для чека (ФФД); согласие с офертой/ПДн проверяется в UI пейволла. */
+  function startPayment(email: string) {
     if (!isHttpMode) {
       // Mock-прототип: демонстрационный переход на Success, как раньше.
       go('success')
@@ -385,7 +386,7 @@ function App() {
     }
     setPayPending(true)
     void apiClient
-      .createPayment()
+      .createPayment(email)
       .then(({ confirmationUrl }) => {
         openExternalLink(confirmationUrl)
         // Подстраховка к поллингу по фокусу: одна отложенная проверка доступа.
@@ -1687,9 +1688,20 @@ function PaywallScreen({
   back: () => void
   go: (screen: Screen) => void
   onAlreadyPaid: () => void
-  onPay: () => void
+  onPay: (email: string) => void
   payPending: boolean
 }) {
+  const [email, setEmail] = useState('')
+  const [consent, setConsent] = useState(false)
+  const emailOk = isValidEmail(email)
+  const canPay = emailOk && consent && !payPending
+
+  // Открываем юр. документы через SDK (в Telegram) / новую вкладку (в браузере).
+  const openLegal = (path: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    openExternalLink(`${origin}${path}`)
+  }
+
   return (
     <section className="screen">
       <TopBar onBack={back} />
@@ -1710,7 +1722,50 @@ function PaywallScreen({
         </div>
         <div>
           <p className="price-note">500 ₽ в месяц. Оплата картой на защищённой странице.</p>
-          <button className="cta full" disabled={payPending} onClick={onPay} type="button">
+
+          {/* E-mail для чека (ФФД) — без него ЮKassa не пробьёт чек. */}
+          <label className="pay-field">
+            <span>E-mail для чека</span>
+            <input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+
+          {/* Согласие с офертой и обработкой ПДн (152-ФЗ). */}
+          <label className="consent">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+            />
+            <span>
+              Принимаю{' '}
+              <button className="link" type="button" onClick={() => openLegal('/legal/offer.html')}>
+                оферту
+              </button>{' '}
+              и{' '}
+              <button
+                className="link"
+                type="button"
+                onClick={() => openLegal('/legal/privacy.html')}
+              >
+                согласие на обработку данных
+              </button>
+              . Подписка продлевается автоматически, отменить можно в профиле.
+            </span>
+          </label>
+
+          <button
+            className="cta full"
+            disabled={!canPay}
+            onClick={() => onPay(email.trim())}
+            type="button"
+          >
             {payPending ? 'Открываем оплату…' : 'Открыть за 500 ₽/мес'}
           </button>
           <button className="cta ghost full stacked" onClick={onAlreadyPaid} type="button">

@@ -67,7 +67,7 @@ export interface ApiClient {
   toggleFavorite(workoutSlug: string): Promise<FavoriteToggleResult>
   getFavorites(): Promise<string[]>
   /** Создаёт платёж провайдера (ЮKassa) и возвращает URL страницы оплаты. */
-  createPayment(): Promise<{ confirmationUrl: string }>
+  createPayment(email: string): Promise<{ confirmationUrl: string }>
   /** Персональная подборка: ранжированные тренировки + рекомендованный план. */
   getRecommendations(): Promise<RecommendationsResult>
 }
@@ -222,7 +222,7 @@ function createMockApiClient(): ApiClient {
       return Promise.resolve({ favorited, slugs: [...favorites] })
     },
     getFavorites: () => Promise.resolve([...favorites]),
-    createPayment: () =>
+    createPayment: (_email) =>
       // В прототипе оплата «проходит» сразу: возвращаем фиктивный URL,
       // App в mock-режиме имитирует немедленный доступ (paywall → success).
       Promise.resolve({ confirmationUrl: 'https://example.test/mock-payment' }),
@@ -463,8 +463,12 @@ function createHttpApiClient(baseUrl: string): ApiClient {
       const { slugs } = await request<{ slugs: string[] }>('/favorites')
       return slugs
     },
-    createPayment: () =>
-      request<{ confirmationUrl: string }>('/api/payments/create', { method: 'POST' }),
+    createPayment: (email) =>
+      request<{ confirmationUrl: string }>('/api/payments/create', {
+        method: 'POST',
+        // email — для чека (ФФД); consent — согласие с офертой/ПДн (152-ФЗ).
+        body: JSON.stringify({ email, consent: true }),
+      }),
     getRecommendations: () => request<RecommendationsResult>('/recommendations'),
   }
 }

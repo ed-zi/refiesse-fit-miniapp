@@ -41,6 +41,11 @@ export interface CreatePaymentParams {
   savePaymentMethod: boolean;
   returnUrl: string;
   idempotenceKey: string;
+  /**
+   * E-mail плательщика для чека (ФФД). Если задан — в платёж добавляется receipt,
+   * и ЮKassa пробивает чек через облачную кассу. Без контакта чек не пробить.
+   */
+  customerEmail?: string;
 }
 
 export interface CreateRecurringParams {
@@ -49,6 +54,32 @@ export interface CreateRecurringParams {
   telegramUserId: number | string;
   description?: string;
   idempotenceKey: string;
+  /** E-mail плательщика для чека при автосписании (см. createPayment). */
+  customerEmail?: string;
+}
+
+/** Ставка НДС в чеке: ИП на УСН → «без НДС» (код 1). */
+const VAT_CODE_USN = 1;
+
+/**
+ * Данные чека (ФФД) для ЮKassa. Одна позиция — подписка; сумма в рублях (строкой).
+ * customer.email обязателен, иначе чек не пробьётся. payment_subject=service —
+ * услуга; payment_mode=full_payment — полная оплата.
+ */
+function buildReceipt(email: string, amountRub: number, description: string): unknown {
+  return {
+    customer: { email },
+    items: [
+      {
+        description,
+        quantity: '1.00',
+        amount: { value: toAmountValue(amountRub), currency: CURRENCY },
+        vat_code: VAT_CODE_USN,
+        payment_mode: 'full_payment',
+        payment_subject: 'service',
+      },
+    ],
+  };
 }
 
 export interface YookassaApi {
@@ -159,6 +190,9 @@ export class YookassaHttpClient implements YookassaApi {
       description: params.description,
       save_payment_method: params.savePaymentMethod,
       metadata: { telegram_user_id: String(params.telegramUserId) },
+      ...(params.customerEmail
+        ? { receipt: buildReceipt(params.customerEmail, params.amountRub, params.description) }
+        : {}),
     };
     return normalizePayment(await this.request('POST', '/payments', body, params.idempotenceKey));
   }
@@ -168,12 +202,16 @@ export class YookassaHttpClient implements YookassaApi {
   }
 
   async createRecurring(params: CreateRecurringParams): Promise<YookassaPayment> {
+    const description = params.description ?? 'Refiesse Fit — продление подписки';
     const body = {
       amount: { value: toAmountValue(params.amountRub), currency: CURRENCY },
       capture: true,
       payment_method_id: params.paymentMethodId,
-      description: params.description ?? 'Refiesse Fit — продление подписки',
+      description,
       metadata: { telegram_user_id: String(params.telegramUserId) },
+      ...(params.customerEmail
+        ? { receipt: buildReceipt(params.customerEmail, params.amountRub, description) }
+        : {}),
     };
     return normalizePayment(await this.request('POST', '/payments', body, params.idempotenceKey));
   }

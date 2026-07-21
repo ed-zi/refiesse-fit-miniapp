@@ -164,8 +164,15 @@ test.describe('Refiesse Fit — бета-флоу', () => {
       page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),
     ).toBeVisible()
 
-    await page.getByRole('button', { name: /Открыть за 500/ }).click()
-    // Ссылка Tribute не задана → мягкая заглушка, остаёмся на paywall.
+    // Оплата защищена: без email и согласия кнопка неактивна (чек ФФД / 152-ФЗ).
+    const payButton = page.getByRole('button', { name: /Открыть за 500/ })
+    await expect(payButton).toBeDisabled()
+    await page.getByPlaceholder('you@example.com').fill('test@example.com')
+    await page.getByRole('checkbox').check()
+    await expect(payButton).toBeEnabled()
+
+    await payButton.click()
+    // Ключи ЮKassa не заданы → 503 → мягкая заглушка, остаёмся на paywall.
     await expect(page.locator('.toast.show')).toContainText('Оплата скоро подключится')
     await expect(
       page.getByRole('heading', { name: 'Идти по системе, а не искать посты' }),

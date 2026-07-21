@@ -81,6 +81,14 @@ model User {
   reminderHour      Int?      @map("reminder_hour")       // 0..23 по МСК
   reminderLastSentOn DateTime? @db.Date @map("reminder_last_sent_on")
 
+  // Платёжные/юридические данные (ИП на УСН). email — для чека ЮKassa (ФФД,
+  // облачная касса) и повторных списаний; чек не пробить без контакта плательщика.
+  // consent* — доказательство согласия по 152-ФЗ: когда и какую версию оферты/
+  // политики принял пользователь при оплате.
+  email             String?   @map("email")
+  consentAcceptedAt DateTime? @map("consent_accepted_at")
+  consentDocVersion String?   @map("consent_doc_version")
+
   isAdmin   Boolean  @default(false) @map("is_admin")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

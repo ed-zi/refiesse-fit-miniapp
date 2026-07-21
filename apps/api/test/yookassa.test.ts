@@ -114,7 +114,20 @@ describe('POST /api/payments/create', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('с JWT → confirmationUrl, save_payment_method и metadata переданы', async () => {
+  it('без email/согласия → 400 CONSENT_REQUIRED (платёж не создаётся)', async () => {
+    const token = await authAs(920003);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/payments/create',
+      headers: bearer(token),
+      payload: { consent: true }, // email отсутствует
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('CONSENT_REQUIRED');
+    expect(fake.created).toHaveLength(0);
+  });
+
+  it('с JWT + email/согласие → confirmationUrl; email в чеке и согласие сохранены', async () => {
     const token = await authAs(920001);
     fake.createResult = makePayment({
       id: 'pay_created',
@@ -125,7 +138,7 @@ describe('POST /api/payments/create', () => {
       method: 'POST',
       url: '/api/payments/create',
       headers: bearer(token),
-      payload: {},
+      payload: { email: 'katya@example.com', consent: true },
     });
 
     expect(res.statusCode).toBe(200);
@@ -136,6 +149,16 @@ describe('POST /api/payments/create', () => {
     expect(createParams.savePaymentMethod).toBe(true);
     expect(createParams.telegramUserId).toBe(920001);
     expect(createParams.returnUrl).toBe(testConfig.yookassaReturnUrl);
+    // Email проброшен для чека (ФФД).
+    expect(createParams.customerEmail).toBe('katya@example.com');
+
+    // Согласие (152-ФЗ) зафиксировано у пользователя: email + дата + версия.
+    const user = await app.prisma.user.findUniqueOrThrow({
+      where: { telegramUserId: 920001n },
+    });
+    expect(user.email).toBe('katya@example.com');
+    expect(user.consentAcceptedAt).not.toBeNull();
+    expect(user.consentDocVersion).toBe('2026-07-21');
   });
 
   it('без ключей ЮKassa → 503 PAYMENTS_DISABLED', async () => {

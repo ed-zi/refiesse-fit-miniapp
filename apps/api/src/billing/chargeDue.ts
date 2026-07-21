@@ -52,7 +52,7 @@ export async function chargeDueSubscriptions(
       paymentMethodId: { not: null },
       expiresAt: { not: null, lte: dueBefore },
     },
-    include: { user: { select: { telegramUserId: true } } },
+    include: { user: { select: { telegramUserId: true, email: true } } },
   });
 
   const outcomes: ChargeOutcome[] = [];
@@ -71,6 +71,8 @@ export async function chargeDueSubscriptions(
         paymentMethodId,
         telegramUserId: Number(subscription.user.telegramUserId),
         idempotenceKey,
+        // Чек при автосписании — на тот же email, что дал пользователь при оплате.
+        customerEmail: subscription.user.email ?? undefined,
       });
 
       if (payment.status === 'succeeded') {
