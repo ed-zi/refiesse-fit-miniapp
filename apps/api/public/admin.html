@@ -82,8 +82,14 @@
         <label>Доступ
           <select id="wf-access"><option value="free">free</option><option value="premium">premium</option></select>
         </label>
-        <label>Инвентарь (через запятую) <input id="wf-equipment" placeholder="коврик, резинка"></label>
+        <label>Инвентарь (через запятую) <input id="wf-equipment" placeholder="Коврик, Резинка, Гантели"></label>
         <label>Видео URL <input id="wf-video" placeholder="https://…"></label>
+        <label>Зоны (через запятую) <input id="wf-zones" placeholder="Шея, Плечи, Поясница"></label>
+        <label>Место (через запятую) <input id="wf-place" placeholder="Дома, В офисе"></label>
+        <label>Нагрузка
+          <select id="wf-intensity"><option value="">—</option><option value="Мягкая">Мягкая</option><option value="Умеренная">Умеренная</option><option value="Интенсивная">Интенсивная</option></select>
+        </label>
+        <label>Ограничения (через запятую) <input id="wf-restrictions" placeholder="Без прыжков, Щадяще для коленей"></label>
       </div>
       <div class="grid" style="margin-top:10px; grid-template-columns:1fr 1fr">
         <label>Описание <textarea id="wf-description" rows="2"></textarea></label>
@@ -119,8 +125,15 @@
       <button id="categoriesReloadBtn" class="primary">Обновить</button>
       <span class="muted">Категорию можно удалить, только если в ней нет тренировок.</span>
     </div>
+    <div class="grid" style="grid-template-columns:80px 1fr 1fr 100px auto; align-items:end; margin:10px 0">
+      <label>Эмодзи <input id="cat-emoji" placeholder="🧘" maxlength="4"></label>
+      <label>Название <input id="cat-title" placeholder="Пилатес"></label>
+      <label>slug <input id="cat-slug" placeholder="pilates"></label>
+      <label>Порядок <input id="cat-sort" type="number" value="0"></label>
+      <button id="cat-add" class="primary">Добавить</button>
+    </div>
     <div class="wrap"><table id="categoriesTable">
-      <thead><tr><th>Название</th><th>slug</th><th>Порядок</th><th>Тренировок</th><th></th></tr></thead>
+      <thead><tr><th>Эмодзи</th><th>Название</th><th>slug</th><th>Порядок</th><th>Тренировок</th><th></th></tr></thead>
       <tbody></tbody>
     </table></div>
   </section>
@@ -304,9 +317,12 @@
     if (show) { wfStepsEditor = makeStepsEditor($('#wf-steps'), []); }
   });
   $('#wf-cancel').addEventListener('click', function () { $('#workoutForm').style.display = 'none'; });
+  function csv(id) {
+    return $(id).value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
   $('#wf-save').addEventListener('click', guard(async function () {
-    var equipment = $('#wf-equipment').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var video = $('#wf-video').value.trim();
+    var intensity = $('#wf-intensity').value;
     await api('POST', '/admin/workouts', {
       slug: $('#wf-slug').value.trim(),
       title: $('#wf-title').value.trim(),
@@ -315,7 +331,11 @@
       level: $('#wf-level').value,
       categoryId: $('#wf-category').value,
       access: $('#wf-access').value,
-      equipment: equipment,
+      equipment: csv('#wf-equipment'),
+      zones: csv('#wf-zones'),
+      place: csv('#wf-place'),
+      intensity: intensity === '' ? null : intensity,
+      restrictions: csv('#wf-restrictions'),
       videoUrl: video === '' ? null : video,
       description: $('#wf-description').value.trim(),
       cautions: $('#wf-cautions').value.trim(),
@@ -551,6 +571,7 @@
       var n = counts[c.id] || 0;
       var tr = document.createElement('tr');
       tr.innerHTML =
+        '<td>' + esc(c.emoji || '') + '</td>' +
         '<td>' + esc(c.title) + '</td>' +
         '<td>' + esc(c.slug) + '</td>' +
         '<td>' + esc(c.sortOrder) + '</td>' +
@@ -565,6 +586,17 @@
     });
   });
   $('#categoriesReloadBtn').addEventListener('click', loadCategories);
+  $('#cat-add').addEventListener('click', guard(async function () {
+    var emoji = $('#cat-emoji').value.trim();
+    await api('POST', '/admin/categories', {
+      slug: $('#cat-slug').value.trim(),
+      title: $('#cat-title').value.trim(),
+      emoji: emoji === '' ? null : emoji,
+      sortOrder: Number($('#cat-sort').value) || 0
+    });
+    $('#cat-emoji').value = ''; $('#cat-title').value = ''; $('#cat-slug').value = '';
+    loadCategories();
+  }));
 
   // ---------------- tribute ----------------
   var loadTribute = guard(async function () {

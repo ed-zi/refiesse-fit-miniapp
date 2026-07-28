@@ -18,10 +18,13 @@ import { CARE_NONE_LABEL } from '@refiesse-fit/shared'
 // ---------------------------------------------------------------------------
 
 export const mockCategories: Category[] = [
-  { id: 'cat-back', slug: 'spina', title: 'Спина', sortOrder: 0 },
-  { id: 'cat-posture', slug: 'osanka', title: 'Осанка', sortOrder: 1 },
-  { id: 'cat-core', slug: 'kor', title: 'Кор', sortOrder: 2 },
-  { id: 'cat-relax', slug: 'relaxation', title: 'Расслабление', sortOrder: 3 },
+  { id: 'cat-pilates', slug: 'pilates', title: 'Пилатес', emoji: '🧘', sortOrder: 0 },
+  { id: 'cat-posture', slug: 'osanka', title: 'Осанка', emoji: '🧍', sortOrder: 1 },
+  { id: 'cat-back', slug: 'healthy-back', title: 'Здоровая спина', emoji: '🩵', sortOrder: 2 },
+  { id: 'cat-stretch', slug: 'stretching', title: 'Растяжка', emoji: '🌿', sortOrder: 3 },
+  { id: 'cat-strength', slug: 'strength', title: 'Сила', emoji: '🔥', sortOrder: 4 },
+  { id: 'cat-recovery', slug: 'recovery', title: 'Восстановление', emoji: '😌', sortOrder: 5 },
+  { id: 'cat-warmup', slug: 'warmups', title: 'Разминки', emoji: '🌅', sortOrder: 6 },
 ]
 
 export const mockWorkouts: Workout[] = [

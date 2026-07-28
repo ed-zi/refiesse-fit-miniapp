@@ -116,6 +116,7 @@ model Category {
   id        String    @id @default(cuid())
   slug      String    @unique
   title     String
+  emoji     String?   // эмодзи-иконка направления (🧘/🔥/🌿…)
   sortOrder Int       @default(0) @map("sort_order")
   createdAt DateTime  @default(now()) @map("created_at")
 
@@ -133,6 +134,11 @@ model Workout {
   durationMin Int          @map("duration_min")
   level       WorkoutLevel @default(beginner)
   equipment   String[]     // массив инвентаря (мультивыбор)
+  // Теги каталога (финальная таксономия, docs/product/catalog-taxonomy.md).
+  zones        String[]    @default([]) // по зоне: Шея, Плечи, Поясница, Пресс/кор…
+  place        String[]    @default([]) // по месту: Дома, На улице, В зале, В офисе
+  intensity    String?     // по нагрузке: мягкая / умеренная / интенсивная
+  restrictions String[]    @default([]) // ограничения: без прыжков, без опоры на запястья…
   access      AccessType   @default(free) // free/premium вместо булева is_premium
   videoUrl    String?      @map("video_url") // отдаётся только при наличии доступа
   description String

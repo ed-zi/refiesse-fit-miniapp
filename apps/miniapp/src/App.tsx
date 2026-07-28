@@ -965,7 +965,7 @@ function HomeScreen({
             onClick={() => go('catalog')}
             type="button"
           >
-            {category.title}
+            {category.emoji ? `${category.emoji} ${category.title}` : category.title}
           </button>
         ))}
       </div>

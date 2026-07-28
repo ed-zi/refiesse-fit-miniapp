@@ -26,6 +26,10 @@ const workoutCreateSchema = z.object({
   durationMin: z.number().int().positive(),
   level: z.enum(['beginner', 'medium', 'advanced']),
   equipment: z.array(z.string()).default([]),
+  zones: z.array(z.string()).default([]),
+  place: z.array(z.string()).default([]),
+  intensity: z.string().nullable().optional(),
+  restrictions: z.array(z.string()).default([]),
   access: z.enum(['free', 'premium']).default('free'),
   videoUrl: z.string().nullable().optional(),
   description: z.string().min(1),
@@ -42,6 +46,10 @@ const workoutUpdateSchema = z
     durationMin: z.number().int().positive(),
     level: z.enum(['beginner', 'medium', 'advanced']),
     equipment: z.array(z.string()),
+    zones: z.array(z.string()),
+    place: z.array(z.string()),
+    intensity: z.string().nullable(),
+    restrictions: z.array(z.string()),
     access: z.enum(['free', 'premium']),
     videoUrl: z.string().nullable(),
     description: z.string().min(1),
@@ -58,6 +66,7 @@ const categoryCreateSchema = z.object({
     .min(1)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'slug: латиница-кебаб (a-z, 0-9, дефисы)'),
   title: z.string().min(1),
+  emoji: z.string().nullable().optional(),
   sortOrder: z.number().int().default(0),
 });
 

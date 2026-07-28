@@ -98,6 +98,10 @@ describe('admin workouts CRUD', () => {
         durationMin: 11,
         level: 'beginner',
         equipment: ['коврик'],
+        zones: ['Шея', 'Плечи'],
+        place: ['В офисе'],
+        intensity: 'Мягкая',
+        restrictions: ['Без прыжков'],
         access: 'free',
         videoUrl: 'https://placeholder/refiesse/qa',
         description: 'Тестовая тренировка.',
@@ -108,6 +112,9 @@ describe('admin workouts CRUD', () => {
     expect(created.statusCode).toBe(201);
     workoutId = created.json().workout.id;
     expect(created.json().workout.category.slug).toBe('spina');
+    // Теги каталога сохранены.
+    expect(created.json().workout.zones).toEqual(['Шея', 'Плечи']);
+    expect(created.json().workout.intensity).toBe('Мягкая');
 
     const adminList = await app.inject({
       method: 'GET',

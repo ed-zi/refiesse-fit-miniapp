@@ -18,6 +18,7 @@ export interface CategoryDto {
   id: string;
   slug: string;
   title: string;
+  emoji: string | null;
   sortOrder: number;
 }
 
@@ -33,6 +34,10 @@ export interface WorkoutCardDto {
   durationMin: number;
   level: 'beginner' | 'medium' | 'advanced';
   equipment: string[];
+  zones: string[];
+  place: string[];
+  intensity: string | null;
+  restrictions: string[];
   isPremium: boolean;
   /** true = premium-контент закрыт для этого пользователя. */
   isLocked: boolean;
@@ -100,6 +105,7 @@ export function toCategoryDto(category: Category): CategoryDto {
     id: category.id,
     slug: category.slug,
     title: category.title,
+    emoji: category.emoji,
     sortOrder: category.sortOrder,
   };
 }
@@ -119,6 +125,10 @@ export function toWorkoutCardDto(
     durationMin: workout.durationMin,
     level: workout.level,
     equipment: workout.equipment,
+    zones: workout.zones,
+    place: workout.place,
+    intensity: workout.intensity,
+    restrictions: workout.restrictions,
     isPremium,
     isLocked: isPremium && !options.unlocked,
     description: workout.description,
